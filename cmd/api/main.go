@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"cipicung.id/be/config"
@@ -21,6 +23,26 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	corsConfig := cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:5173",
+			"https://admin.cipicung.id",
+			"https://cipicung.id",
+		},
+		AllowMethods: []string{"POST"},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+			"X-Requested-With",
+		},
+		ExposeHeaders:    []string{"Content-Length", "Content-Disposition"},
+		AllowCredentials: true,
+		MaxAge:           43200 * time.Second,
+	}
+	r.Use(cors.New(corsConfig))
 
 	api := r.Group("/api")
 
