@@ -64,4 +64,4 @@ jobs:
           script: |
             cd /home/ilham/app/desa-cipicung-be/
             chmod +x main
-            sudo systemctl restart cipicung-api.service
+            echo "${{ secrets.VPS_PASSWORD }}" | sudo -S systemctl restart cipicung-api.service
