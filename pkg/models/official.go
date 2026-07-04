@@ -11,7 +11,6 @@ type Official struct {
 	Position    string    `db:"position" json:"position"`
 	Phone       string    `db:"phone" json:"phone"`
 	Email       string    `db:"email" json:"email"`
-	Photo       string    `db:"photo" json:"photo"`
 	Description string    `db:"description" json:"description"`
 	OrderNumber int       `db:"order_number" json:"order_number"`
 	IsActive    bool      `db:"is_active" json:"is_active"`
@@ -20,4 +19,5 @@ type Official struct {
 
 	// Relations
 	Village *Village `db:"-" json:"village,omitempty"`
+	Media   []Media  `db:"-" json:"media,omitempty"`
 }

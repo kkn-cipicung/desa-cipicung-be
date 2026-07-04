@@ -1,0 +1,24 @@
+package category
+
+type AddCategoryPayload struct {
+	Name string `json:"name" binding:"required"`
+	Slug string `json:"slug" binding:"required"`
+	Type string `json:"type" binding:"required"`
+}
+
+type EditCategoryPayload struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name" binding:"required"`
+	Slug string `json:"slug" binding:"required"`
+	Type string `json:"type" binding:"required"`
+}
+
+type CategoryPayload struct {
+	ID uint `json:"id" binding:"required"`
+}
+
+type ListCategoryPayload struct {
+	Limit int    `form:"limit" json:"limit"`
+	Index int    `form:"index" json:"index"`
+	Type  string `form:"type" json:"type"`
+}

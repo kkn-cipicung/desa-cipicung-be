@@ -21,11 +21,10 @@ type Village struct {
 	Mission     string    `db:"mission" json:"mission"`
 	History     string    `db:"history" json:"history"`
 	Description string    `db:"description" json:"description"`
-	Logo        string    `db:"logo" json:"logo"`
-	Banner      string    `db:"banner" json:"banner"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 
 	// Relations
 	Officials []Official `db:"-" json:"officials,omitempty"`
+	Media     []Media    `db:"-" json:"media,omitempty"`
 }

@@ -13,8 +13,6 @@ type Post struct {
 	Slug         string     `db:"slug" json:"slug"`
 	Excerpt      string     `db:"excerpt" json:"excerpt"`
 	Content      string     `db:"content" json:"content"`
-	Thumbnail    string     `db:"thumbnail" json:"thumbnail"`
-	Attachment   string     `db:"attachment" json:"attachment"`
 	PublishStart *time.Time `db:"publish_start" json:"publish_start"`
 	PublishEnd   *time.Time `db:"publish_end" json:"publish_end"`
 	IsPinned     bool       `db:"is_pinned" json:"is_pinned"`
@@ -26,4 +24,5 @@ type Post struct {
 	// Relations
 	Category *Category `db:"-" json:"category,omitempty"`
 	Author   *User     `db:"-" json:"author,omitempty"`
+	Media    []Media   `db:"-" json:"media,omitempty"`
 }

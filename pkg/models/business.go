@@ -12,11 +12,11 @@ type Business struct {
 	Description  string    `db:"description" json:"description"`
 	Phone        string    `db:"phone" json:"phone"`
 	Address      string    `db:"address" json:"address"`
-	Photo        string    `db:"photo" json:"photo"`
 	Instagram    string    `db:"instagram" json:"instagram"`
 	Facebook     string    `db:"facebook" json:"facebook"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 
 	// Relations
 	Category *Category `db:"-" json:"category,omitempty"`
+	Media    []Media   `db:"-" json:"media,omitempty"`
 }

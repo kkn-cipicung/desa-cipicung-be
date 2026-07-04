@@ -21,4 +21,5 @@ type User struct {
 	Galleries    []Gallery     `db:"-" json:"galleries,omitempty"`
 	Documents    []Document    `db:"-" json:"documents,omitempty"`
 	ActivityLogs []ActivityLog `db:"-" json:"activity_logs,omitempty"`
+	Media        []Media       `db:"-" json:"media,omitempty"`
 }
