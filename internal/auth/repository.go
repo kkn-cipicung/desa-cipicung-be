@@ -12,7 +12,7 @@ import (
 var ErrUserNotFound = errors.New("user not found")
 
 type Repository interface {
-	Register(ctx context.Context, payload RegisterPayload) error
+	Register(ctx context.Context, payload RegisterPayload, role string) error
 	FindByUsername(ctx context.Context, username string) (*models.User, error)
 	UpdateLastLogin(ctx context.Context, userID uint) error
 	InsertSessionLog(ctx context.Context, userID uint, accessToken, refreshToken string) error
@@ -26,9 +26,7 @@ func NewRepository(db *sqlx.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) Register(ctx context.Context, payload RegisterPayload) error {
-	role := "admin"
-
+func (r *repository) Register(ctx context.Context, payload RegisterPayload, role string) error {
 	query := `
 		INSERT INTO users (name, username, password, role)
 		VALUES ($1, $2, $3, $4)
@@ -75,4 +73,3 @@ func (r *repository) InsertSessionLog(ctx context.Context, userID uint, accessTo
 	_, err := r.db.ExecContext(ctx, query, userID, accessToken, refreshToken)
 	return err
 }
-

@@ -1,6 +1,10 @@
 package dashboard
 
-import "context"
+import (
+	"context"
+
+	"cipicung.id/be/utils/file"
+)
 
 const (
 	defaultDashboardLimit = 10
@@ -24,7 +28,12 @@ func NewService(repository Repository) Service {
 }
 
 func (s *service) Create(ctx context.Context, payload AddDashboardPayload) error {
-	return s.repository.Create(ctx, payload)
+	media, err := prepareDashboardMedia(payload.ImgID, payload.CreatedBy)
+	if err != nil {
+		return err
+	}
+
+	return s.repository.Create(ctx, payload, media)
 }
 
 func (s *service) List(ctx context.Context, payload ListDashboardPayload) ([]DashboardResponse, error) {
@@ -37,7 +46,12 @@ func (s *service) FindByID(ctx context.Context, payload DashboardPayload) (*Dash
 }
 
 func (s *service) Update(ctx context.Context, payload EditDashboardPayload) error {
-	return s.repository.Update(ctx, payload)
+	media, err := prepareDashboardMedia(payload.ImgID, 0)
+	if err != nil {
+		return err
+	}
+
+	return s.repository.Update(ctx, payload, media)
 }
 
 func (s *service) Delete(ctx context.Context, payload DashboardPayload) error {
@@ -58,4 +72,26 @@ func normalizeListDashboardPayload(payload ListDashboardPayload) ListDashboardPa
 	}
 
 	return payload
+}
+
+func prepareDashboardMedia(imgBase64 string, uploadedBy uint) (*dashboardMediaPayload, error) {
+	if imgBase64 == "" {
+		return nil, nil
+	}
+
+	filePath, mimeType, err := file.SaveBase64(imgBase64, "uploads/dashboard")
+	if err != nil {
+		return nil, err
+	}
+
+	media := &dashboardMediaPayload{
+		FilePath: filePath,
+		MimeType: mimeType,
+	}
+
+	if uploadedBy != 0 {
+		media.UploadedBy = &uploadedBy
+	}
+
+	return media, nil
 }

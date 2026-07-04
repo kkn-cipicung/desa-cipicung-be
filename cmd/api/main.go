@@ -11,6 +11,7 @@ import (
 	"cipicung.id/be/internal/auth"
 	"cipicung.id/be/internal/category"
 	"cipicung.id/be/internal/dashboard"
+	"cipicung.id/be/internal/news"
 	"cipicung.id/be/pkg/database"
 )
 
@@ -66,6 +67,11 @@ func main() {
 	categoryService := category.NewService(categoryRepository)
 	categoryHandler := category.NewHandler(categoryService)
 	categoryHandler.RegisterRoutes(api)
+
+	newsRepository := news.NewRepository(db)
+	newsService := news.NewService(newsRepository)
+	newsHandler := news.NewHandler(newsService)
+	newsHandler.RegisterRoutes(api)
 
 	log.Printf("Server is running on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

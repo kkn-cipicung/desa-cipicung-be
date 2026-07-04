@@ -11,6 +11,7 @@ type Gallery struct {
 	Description string    `db:"description" json:"description"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 	CategoryID  uint      `db:"category_id" json:"category_id"`
+	ImgID       uint      `db:"img_id" json:"img_id"`
 
 	// Relations
 	Creator *User   `db:"-" json:"creator,omitempty"`

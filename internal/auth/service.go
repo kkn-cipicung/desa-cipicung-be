@@ -16,6 +16,8 @@ var (
 	ErrUsernameTaken      = utils.ErrUsernameTaken
 )
 
+const defaultRegisterRole = "admin"
+
 type Service interface {
 	Register(ctx context.Context, payload RegisterPayload) error
 	Login(ctx context.Context, payload LoginPayload) (*tokenutils.Pair, error)
@@ -47,7 +49,7 @@ func (s *service) Register(ctx context.Context, payload RegisterPayload) error {
 	}
 	payload.Password = string(hashedPassword)
 
-	return s.repository.Register(ctx, payload)
+	return s.repository.Register(ctx, payload, defaultRegisterRole)
 }
 
 func (s *service) Login(ctx context.Context, payload LoginPayload) (*tokenutils.Pair, error) {
