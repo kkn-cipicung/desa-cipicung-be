@@ -32,7 +32,7 @@ func (h *Handler) Create(c *gin.Context) {
 	payload.CreatedBy = userID
 
 	if err := h.service.Create(c.Request.Context(), payload); err != nil {
-		utils.ErrorResponseJSON(c, http.StatusInternalServerError, "Failed to create dashboard", err)
+		handleDashboardError(c, err, "Failed to create dashboard")
 		return
 	}
 
@@ -48,7 +48,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	dashboards, err := h.service.List(c.Request.Context(), payload)
 	if err != nil {
-		utils.ErrorResponseJSON(c, http.StatusInternalServerError, "Failed to get dashboards", err)
+		handleDashboardError(c, err, "Failed to get dashboards")
 		return
 	}
 
@@ -119,6 +119,10 @@ func (h *Handler) Delete(c *gin.Context) {
 func handleDashboardError(c *gin.Context, err error, message string) {
 	if errors.Is(err, ErrDashboardNotFound) {
 		utils.ErrorResponseJSON(c, http.StatusNotFound, "Dashboard not found", err)
+		return
+	}
+	if errors.Is(err, utils.ErrInvalidPayload) {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
 		return
 	}
 

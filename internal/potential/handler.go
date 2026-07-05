@@ -25,7 +25,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), payload); err != nil {
-		utils.ErrorResponseJSON(c, http.StatusInternalServerError, "Failed to create potential", err)
+		handlePotentialError(c, err, "Failed to create potential")
 		return
 	}
 
@@ -41,7 +41,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	potentialList, err := h.service.List(c.Request.Context(), payload)
 	if err != nil {
-		utils.ErrorResponseJSON(c, http.StatusInternalServerError, "Failed to get potentials", err)
+		handlePotentialError(c, err, "Failed to get potentials")
 		return
 	}
 
@@ -112,6 +112,10 @@ func (h *Handler) Delete(c *gin.Context) {
 func handlePotentialError(c *gin.Context, err error, message string) {
 	if errors.Is(err, ErrPotentialNotFound) {
 		utils.ErrorResponseJSON(c, http.StatusNotFound, "Potential not found", err)
+		return
+	}
+	if errors.Is(err, utils.ErrInvalidPayload) {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
 		return
 	}
 

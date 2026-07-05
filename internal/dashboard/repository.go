@@ -5,16 +5,17 @@ import (
 	"database/sql"
 	"errors"
 
+	"cipicung.id/be/utils"
 	"github.com/jmoiron/sqlx"
 )
 
 var ErrDashboardNotFound = errors.New("dashboard not found")
 
 type Repository interface {
-	Create(ctx context.Context, payload AddDashboardPayload, media *dashboardMediaPayload) error
+	Create(ctx context.Context, payload AddDashboardPayload, media *utils.MediaPayload) error
 	List(ctx context.Context, payload ListDashboardPayload) ([]DashboardResponse, error)
 	FindByID(ctx context.Context, payload DashboardPayload) (*DashboardResponse, error)
-	Update(ctx context.Context, payload EditDashboardPayload, media *dashboardMediaPayload) error
+	Update(ctx context.Context, payload EditDashboardPayload, media *utils.MediaPayload) error
 	Delete(ctx context.Context, payload DashboardPayload) error
 }
 
@@ -26,7 +27,7 @@ func NewRepository(db *sqlx.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) Create(ctx context.Context, payload AddDashboardPayload, media *dashboardMediaPayload) error {
+func (r *repository) Create(ctx context.Context, payload AddDashboardPayload, media *utils.MediaPayload) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
@@ -35,7 +36,7 @@ func (r *repository) Create(ctx context.Context, payload AddDashboardPayload, me
 
 	var mediaID *uint
 	if media != nil {
-		mediaID, err = insertDashboardMedia(ctx, tx, media)
+		mediaID, err = utils.InsertMedia(ctx, tx, media)
 		if err != nil {
 			return err
 		}
@@ -90,7 +91,7 @@ func (r *repository) FindByID(ctx context.Context, payload DashboardPayload) (*D
 	return &result, nil
 }
 
-func (r *repository) Update(ctx context.Context, payload EditDashboardPayload, media *dashboardMediaPayload) error {
+func (r *repository) Update(ctx context.Context, payload EditDashboardPayload, media *utils.MediaPayload) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
@@ -98,7 +99,7 @@ func (r *repository) Update(ctx context.Context, payload EditDashboardPayload, m
 	defer tx.Rollback()
 
 	if media != nil {
-		mediaID, err := insertDashboardMedia(ctx, tx, media)
+		mediaID, err := utils.InsertMedia(ctx, tx, media)
 		if err != nil {
 			return err
 		}
@@ -148,21 +149,6 @@ func (r *repository) Update(ctx context.Context, payload EditDashboardPayload, m
 	}
 
 	return tx.Commit()
-}
-
-func insertDashboardMedia(ctx context.Context, tx *sqlx.Tx, media *dashboardMediaPayload) (*uint, error) {
-	query := `
-		INSERT INTO media (file_path, mime_type, uploaded_by)
-		VALUES ($1, $2, $3)
-		RETURNING id
-	`
-
-	var id uint
-	if err := tx.QueryRowContext(ctx, query, media.FilePath, media.MimeType, media.UploadedBy).Scan(&id); err != nil {
-		return nil, err
-	}
-
-	return &id, nil
 }
 
 func (r *repository) Delete(ctx context.Context, payload DashboardPayload) error {

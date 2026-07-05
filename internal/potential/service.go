@@ -2,13 +2,10 @@ package potential
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
-	"cipicung.id/be/utils/file"
-)
-
-const (
-	defaultPotentialLimit = 10
-	maxPotentialLimit     = 100
+	"cipicung.id/be/utils"
 )
 
 type Service interface {
@@ -28,7 +25,39 @@ func NewService(repository Repository) Service {
 }
 
 func (s *service) Create(ctx context.Context, payload AddPotentialPayload) error {
-	media, err := preparePotentialMedia(payload.ImgID, payload.UploadedBy)
+	payload.Title = strings.TrimSpace(payload.Title)
+	payload.Subtitle = strings.TrimSpace(payload.Subtitle)
+	payload.Slug = strings.TrimSpace(payload.Slug)
+	payload.Description = strings.TrimSpace(payload.Description)
+	payload.OwnerName = strings.TrimSpace(payload.OwnerName)
+	payload.OwnerMsisdn = strings.TrimSpace(payload.OwnerMsisdn)
+
+	if payload.UploadedBy == 0 {
+		return fmt.Errorf("%w: uploaded_by must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.CategoryID == 0 {
+		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.Title == "" {
+		return fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
+	}
+	if payload.Slug == "" {
+		return fmt.Errorf("%w: slug is required", utils.ErrInvalidPayload)
+	}
+	if payload.Description == "" {
+		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
+	}
+	if payload.Latitude < -90 || payload.Latitude > 90 {
+		return fmt.Errorf("%w: latitude must be between -90 and 90", utils.ErrInvalidPayload)
+	}
+	if payload.Longitude < -180 || payload.Longitude > 180 {
+		return fmt.Errorf("%w: longitude must be between -180 and 180", utils.ErrInvalidPayload)
+	}
+	if payload.OwnerName == "" {
+		return fmt.Errorf("%w: owner_name is required", utils.ErrInvalidPayload)
+	}
+
+	media, err := utils.PrepareMedia(payload.ImgID, "uploads/potentials", payload.UploadedBy)
 	if err != nil {
 		return err
 	}
@@ -37,16 +66,51 @@ func (s *service) Create(ctx context.Context, payload AddPotentialPayload) error
 }
 
 func (s *service) List(ctx context.Context, payload ListPotentialPayload) ([]PotentialResponse, error) {
-	payload = normalizeListPotentialPayload(payload)
+	utils.NormalizePagination(&payload.Limit, &payload.Index)
 	return s.repository.List(ctx, payload)
 }
 
 func (s *service) FindByID(ctx context.Context, payload PotentialPayload) (*PotentialResponse, error) {
+	if payload.ID == 0 {
+		return nil, fmt.Errorf("%w: potential id must be greater than 0", utils.ErrInvalidPayload)
+	}
 	return s.repository.FindByID(ctx, payload)
 }
 
 func (s *service) Update(ctx context.Context, payload EditPotentialPayload) error {
-	media, err := preparePotentialMedia(payload.ImgID, 0)
+	payload.Title = strings.TrimSpace(payload.Title)
+	payload.Subtitle = strings.TrimSpace(payload.Subtitle)
+	payload.Slug = strings.TrimSpace(payload.Slug)
+	payload.Description = strings.TrimSpace(payload.Description)
+	payload.OwnerName = strings.TrimSpace(payload.OwnerName)
+	payload.OwnerMsisdn = strings.TrimSpace(payload.OwnerMsisdn)
+
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: potential id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.CategoryID == 0 {
+		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.Title == "" {
+		return fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
+	}
+	if payload.Slug == "" {
+		return fmt.Errorf("%w: slug is required", utils.ErrInvalidPayload)
+	}
+	if payload.Description == "" {
+		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
+	}
+	if payload.Latitude < -90 || payload.Latitude > 90 {
+		return fmt.Errorf("%w: latitude must be between -90 and 90", utils.ErrInvalidPayload)
+	}
+	if payload.Longitude < -180 || payload.Longitude > 180 {
+		return fmt.Errorf("%w: longitude must be between -180 and 180", utils.ErrInvalidPayload)
+	}
+	if payload.OwnerName == "" {
+		return fmt.Errorf("%w: owner_name is required", utils.ErrInvalidPayload)
+	}
+
+	media, err := utils.PrepareMedia(payload.ImgID, "uploads/potentials", 0)
 	if err != nil {
 		return err
 	}
@@ -55,43 +119,8 @@ func (s *service) Update(ctx context.Context, payload EditPotentialPayload) erro
 }
 
 func (s *service) Delete(ctx context.Context, payload PotentialPayload) error {
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: potential id must be greater than 0", utils.ErrInvalidPayload)
+	}
 	return s.repository.Delete(ctx, payload)
-}
-
-func normalizeListPotentialPayload(payload ListPotentialPayload) ListPotentialPayload {
-	if payload.Limit <= 0 {
-		payload.Limit = defaultPotentialLimit
-	}
-
-	if payload.Limit > maxPotentialLimit {
-		payload.Limit = maxPotentialLimit
-	}
-
-	if payload.Index < 0 {
-		payload.Index = 0
-	}
-
-	return payload
-}
-
-func preparePotentialMedia(imgBase64 string, uploadedBy uint) (*potentialMediaPayload, error) {
-	if imgBase64 == "" {
-		return nil, nil
-	}
-
-	filePath, mimeType, err := file.SaveBase64(imgBase64, "uploads/potentials")
-	if err != nil {
-		return nil, err
-	}
-
-	media := &potentialMediaPayload{
-		FilePath: filePath,
-		MimeType: mimeType,
-	}
-
-	if uploadedBy != 0 {
-		media.UploadedBy = &uploadedBy
-	}
-
-	return media, nil
 }

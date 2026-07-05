@@ -43,9 +43,3 @@ type NewsResponse struct {
 	Description string    `db:"description" json:"description"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 }
-
-type newsMediaPayload struct {
-	FilePath   string
-	MimeType   string
-	UploadedBy *uint
-}

@@ -2,13 +2,11 @@ package news
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
 
-	"cipicung.id/be/utils/file"
-)
-
-const (
-	defaultNewsLimit = 10
-	maxNewsLimit     = 100
+	"cipicung.id/be/utils"
 )
 
 type Service interface {
@@ -29,7 +27,23 @@ func NewService(repository Repository) Service {
 }
 
 func (s *service) Create(ctx context.Context, payload AddNewsPayload) error {
-	media, err := prepareNewsMedia(payload.ImgID, payload.UploadedBy)
+	payload.Title = strings.TrimSpace(payload.Title)
+	payload.Description = strings.TrimSpace(payload.Description)
+
+	if payload.UploadedBy == 0 {
+		return fmt.Errorf("%w: uploaded_by must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.CategoryID == 0 {
+		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.Title == "" {
+		return fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
+	}
+	if payload.Description == "" {
+		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
+	}
+
+	media, err := utils.PrepareMedia(payload.ImgID, "uploads/news", payload.UploadedBy)
 	if err != nil {
 		return err
 	}
@@ -38,16 +52,35 @@ func (s *service) Create(ctx context.Context, payload AddNewsPayload) error {
 }
 
 func (s *service) List(ctx context.Context, payload ListNewsPayload) ([]NewsResponse, error) {
-	payload = normalizeListNewsPayload(payload)
+	utils.NormalizePagination(&payload.Limit, &payload.Index)
 	return s.repository.List(ctx, payload)
 }
 
 func (s *service) FindByID(ctx context.Context, payload NewsByIdPayload) (*NewsResponse, error) {
+	if payload.ID == 0 {
+		return nil, fmt.Errorf("%w: news id must be greater than 0", utils.ErrInvalidPayload)
+	}
 	return s.repository.FindByID(ctx, payload)
 }
 
 func (s *service) Update(ctx context.Context, payload EditNewsPayload) error {
-	media, err := prepareNewsMedia(payload.ImgID, 0)
+	payload.Title = strings.TrimSpace(payload.Title)
+	payload.Description = strings.TrimSpace(payload.Description)
+
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: news id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.CategoryID == 0 {
+		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.Title == "" {
+		return fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
+	}
+	if payload.Description == "" {
+		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
+	}
+
+	media, err := utils.PrepareMedia(payload.ImgID, "uploads/news", 0)
 	if err != nil {
 		return err
 	}
@@ -56,47 +89,19 @@ func (s *service) Update(ctx context.Context, payload EditNewsPayload) error {
 }
 
 func (s *service) Delete(ctx context.Context, payload NewsPayload) error {
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: news id must be greater than 0", utils.ErrInvalidPayload)
+	}
 	return s.repository.Delete(ctx, payload)
 }
 
-func normalizeListNewsPayload(payload ListNewsPayload) ListNewsPayload {
-	if payload.Limit <= 0 {
-		payload.Limit = defaultNewsLimit
-	}
-
-	if payload.Limit > maxNewsLimit {
-		payload.Limit = maxNewsLimit
-	}
-
-	if payload.Index < 0 {
-		payload.Index = 0
-	}
-
-	return payload
-}
-
-func prepareNewsMedia(imgBase64 string, uploadedBy uint) (*newsMediaPayload, error) {
-	if imgBase64 == "" {
-		return nil, nil
-	}
-
-	filePath, mimeType, err := file.SaveBase64(imgBase64, "uploads/news")
-	if err != nil {
-		return nil, err
-	}
-
-	media := &newsMediaPayload{
-		FilePath: filePath,
-		MimeType: mimeType,
-	}
-
-	if uploadedBy != 0 {
-		media.UploadedBy = &uploadedBy
-	}
-
-	return media, nil
-}
-
 func (s *service) FindByDate(ctx context.Context, payload NewsByDatePayload) ([]NewsResponse, error) {
+	payload.Date = strings.TrimSpace(payload.Date)
+	if payload.Date == "" {
+		return nil, fmt.Errorf("%w: date is required", utils.ErrInvalidPayload)
+	}
+	if _, err := time.Parse("2006-01-02", payload.Date); err != nil {
+		return nil, fmt.Errorf("%w: invalid date format", utils.ErrInvalidPayload)
+	}
 	return s.repository.FindByDate(ctx, payload)
 }

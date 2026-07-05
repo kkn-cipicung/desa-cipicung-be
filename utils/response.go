@@ -21,6 +21,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid username or password")
 	ErrInactiveUser       = errors.New("user is inactive")
 	ErrUsernameTaken      = errors.New("username already taken")
+	ErrInvalidPayload     = errors.New("invalid request payload")
 )
 
 func SuccessResponse(c *gin.Context, statusCode int, message string, data interface{}) {

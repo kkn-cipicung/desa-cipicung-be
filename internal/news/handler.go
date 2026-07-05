@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"time"
 
 	"cipicung.id/be/utils"
 	"github.com/gin-gonic/gin"
@@ -26,7 +25,7 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), payload); err != nil {
-		utils.ErrorResponseJSON(c, http.StatusInternalServerError, "Failed to create news", err)
+		handleNewsError(c, err, "Failed to create news")
 		return
 	}
 
@@ -42,7 +41,7 @@ func (h *Handler) List(c *gin.Context) {
 
 	newsList, err := h.service.List(c.Request.Context(), payload)
 	if err != nil {
-		utils.ErrorResponseJSON(c, http.StatusInternalServerError, "Failed to get news", err)
+		handleNewsError(c, err, "Failed to get news")
 		return
 	}
 
@@ -122,17 +121,17 @@ func (h *Handler) FindByDate(c *gin.Context) {
 		return
 	}
 
-	parsedDate, err := time.Parse("2006-01-02", payload.Date)
+	parsedDate, err := utils.ParseDate(payload.Date)
 	if err != nil {
 		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid date format, expected YYYY-MM-DD", err)
 		return
 	}
 
-	payload.Date = parsedDate.Format("2006-01-02")
+	payload.Date = parsedDate
 
 	newsList, err := h.service.FindByDate(c.Request.Context(), payload)
 	if err != nil {
-		utils.ErrorResponseJSON(c, http.StatusInternalServerError, "Failed to get news by date", err)
+		handleNewsError(c, err, "Failed to get news by date")
 		return
 	}
 
@@ -142,6 +141,10 @@ func (h *Handler) FindByDate(c *gin.Context) {
 func handleNewsError(c *gin.Context, err error, message string) {
 	if errors.Is(err, ErrNewsNotFound) {
 		utils.ErrorResponseJSON(c, http.StatusNotFound, "News not found", err)
+		return
+	}
+	if errors.Is(err, utils.ErrInvalidPayload) {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
 		return
 	}
 

@@ -35,9 +35,3 @@ type DashboardResponse struct {
 	Description string    `db:"description" json:"description"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 }
-
-type dashboardMediaPayload struct {
-	FilePath   string
-	MimeType   string
-	UploadedBy *uint
-}

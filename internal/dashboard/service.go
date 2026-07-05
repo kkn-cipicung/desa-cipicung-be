@@ -2,13 +2,10 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
-	"cipicung.id/be/utils/file"
-)
-
-const (
-	defaultDashboardLimit = 10
-	maxDashboardLimit     = 100
+	"cipicung.id/be/utils"
 )
 
 type Service interface {
@@ -28,7 +25,23 @@ func NewService(repository Repository) Service {
 }
 
 func (s *service) Create(ctx context.Context, payload AddDashboardPayload) error {
-	media, err := prepareDashboardMedia(payload.ImgID, payload.CreatedBy)
+	payload.Title = strings.TrimSpace(payload.Title)
+	payload.Description = strings.TrimSpace(payload.Description)
+
+	if payload.CreatedBy == 0 {
+		return fmt.Errorf("%w: created_by must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.CategoryID == 0 {
+		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.Title == "" {
+		return fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
+	}
+	if payload.Description == "" {
+		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
+	}
+
+	media, err := utils.PrepareMedia(payload.ImgID, "uploads/dashboard", payload.CreatedBy)
 	if err != nil {
 		return err
 	}
@@ -37,16 +50,35 @@ func (s *service) Create(ctx context.Context, payload AddDashboardPayload) error
 }
 
 func (s *service) List(ctx context.Context, payload ListDashboardPayload) ([]DashboardResponse, error) {
-	payload = normalizeListDashboardPayload(payload)
+	utils.NormalizePagination(&payload.Limit, &payload.Index)
 	return s.repository.List(ctx, payload)
 }
 
 func (s *service) FindByID(ctx context.Context, payload DashboardPayload) (*DashboardResponse, error) {
+	if payload.ID == 0 {
+		return nil, fmt.Errorf("%w: dashboard id must be greater than 0", utils.ErrInvalidPayload)
+	}
 	return s.repository.FindByID(ctx, payload)
 }
 
 func (s *service) Update(ctx context.Context, payload EditDashboardPayload) error {
-	media, err := prepareDashboardMedia(payload.ImgID, 0)
+	payload.Title = strings.TrimSpace(payload.Title)
+	payload.Description = strings.TrimSpace(payload.Description)
+
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: dashboard id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.CategoryID == 0 {
+		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.Title == "" {
+		return fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
+	}
+	if payload.Description == "" {
+		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
+	}
+
+	media, err := utils.PrepareMedia(payload.ImgID, "uploads/dashboard", 0)
 	if err != nil {
 		return err
 	}
@@ -55,43 +87,8 @@ func (s *service) Update(ctx context.Context, payload EditDashboardPayload) erro
 }
 
 func (s *service) Delete(ctx context.Context, payload DashboardPayload) error {
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: dashboard id must be greater than 0", utils.ErrInvalidPayload)
+	}
 	return s.repository.Delete(ctx, payload)
-}
-
-func normalizeListDashboardPayload(payload ListDashboardPayload) ListDashboardPayload {
-	if payload.Limit <= 0 {
-		payload.Limit = defaultDashboardLimit
-	}
-
-	if payload.Limit > maxDashboardLimit {
-		payload.Limit = maxDashboardLimit
-	}
-
-	if payload.Index < 0 {
-		payload.Index = 0
-	}
-
-	return payload
-}
-
-func prepareDashboardMedia(imgBase64 string, uploadedBy uint) (*dashboardMediaPayload, error) {
-	if imgBase64 == "" {
-		return nil, nil
-	}
-
-	filePath, mimeType, err := file.SaveBase64(imgBase64, "uploads/dashboard")
-	if err != nil {
-		return nil, err
-	}
-
-	media := &dashboardMediaPayload{
-		FilePath: filePath,
-		MimeType: mimeType,
-	}
-
-	if uploadedBy != 0 {
-		media.UploadedBy = &uploadedBy
-	}
-
-	return media, nil
 }

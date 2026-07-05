@@ -5,16 +5,17 @@ import (
 	"database/sql"
 	"errors"
 
+	"cipicung.id/be/utils"
 	"github.com/jmoiron/sqlx"
 )
 
 var ErrPotentialNotFound = errors.New("potential not found")
 
 type Repository interface {
-	Create(ctx context.Context, payload AddPotentialPayload, media *potentialMediaPayload) error
+	Create(ctx context.Context, payload AddPotentialPayload, media *utils.MediaPayload) error
 	List(ctx context.Context, payload ListPotentialPayload) ([]PotentialResponse, error)
 	FindByID(ctx context.Context, payload PotentialPayload) (*PotentialResponse, error)
-	Update(ctx context.Context, payload EditPotentialPayload, media *potentialMediaPayload) error
+	Update(ctx context.Context, payload EditPotentialPayload, media *utils.MediaPayload) error
 	Delete(ctx context.Context, payload PotentialPayload) error
 }
 
@@ -26,7 +27,7 @@ func NewRepository(db *sqlx.DB) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) Create(ctx context.Context, payload AddPotentialPayload, media *potentialMediaPayload) error {
+func (r *repository) Create(ctx context.Context, payload AddPotentialPayload, media *utils.MediaPayload) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
@@ -35,7 +36,7 @@ func (r *repository) Create(ctx context.Context, payload AddPotentialPayload, me
 
 	var mediaID *uint
 	if media != nil {
-		mediaID, err = insertPotentialMedia(ctx, tx, media)
+		mediaID, err = utils.InsertMedia(ctx, tx, media)
 		if err != nil {
 			return err
 		}
@@ -101,7 +102,7 @@ func (r *repository) FindByID(ctx context.Context, payload PotentialPayload) (*P
 	return &result, nil
 }
 
-func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, media *potentialMediaPayload) error {
+func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, media *utils.MediaPayload) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
@@ -128,7 +129,7 @@ func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, m
 	}
 
 	if media != nil {
-		mediaID, err := insertPotentialMedia(ctx, tx, media)
+		mediaID, err := utils.InsertMedia(ctx, tx, media)
 		if err != nil {
 			return err
 		}
@@ -186,21 +187,6 @@ func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, m
 	}
 
 	return tx.Commit()
-}
-
-func insertPotentialMedia(ctx context.Context, tx *sqlx.Tx, media *potentialMediaPayload) (*uint, error) {
-	query := `
-		INSERT INTO media (file_path, mime_type, uploaded_by)
-		VALUES ($1, $2, $3)
-		RETURNING id
-	`
-
-	var id uint
-	if err := tx.QueryRowContext(ctx, query, media.FilePath, media.MimeType, media.UploadedBy).Scan(&id); err != nil {
-		return nil, err
-	}
-
-	return &id, nil
 }
 
 func (r *repository) Delete(ctx context.Context, payload PotentialPayload) error {

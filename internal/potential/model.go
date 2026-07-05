@@ -52,9 +52,3 @@ type PotentialResponse struct {
 	MediaId     uint      `db:"media_id" json:"media_id"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
 }
-
-type potentialMediaPayload struct {
-	FilePath   string
-	MimeType   string
-	UploadedBy *uint
-}
