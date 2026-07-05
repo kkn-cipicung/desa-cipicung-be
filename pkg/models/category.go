@@ -12,7 +12,8 @@ type Category struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 
 	// Relations
-	Posts      []Post     `db:"-" json:"posts,omitempty"`
-	Documents  []Document `db:"-" json:"documents,omitempty"`
-	Businesses []Business `db:"-" json:"businesses,omitempty"`
+	Posts      []Post      `db:"-" json:"posts,omitempty"`
+	Documents  []Document  `db:"-" json:"documents,omitempty"`
+	Businesses []Business  `db:"-" json:"businesses,omitempty"`
+	Potentials []Potential `db:"-" json:"potentials,omitempty"`
 }

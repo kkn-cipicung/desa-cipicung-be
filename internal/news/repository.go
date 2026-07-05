@@ -60,7 +60,7 @@ func (r *repository) List(ctx context.Context, payload ListNewsPayload) ([]NewsR
 	query := `
 		SELECT id, category_id, uploaded_by, title, description, created_at
 		FROM documents
-		ORDER BY id DESC
+		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
 	`
 
@@ -195,6 +195,7 @@ func (r *repository) FindByDate(ctx context.Context, payload NewsByDatePayload) 
 		SELECT id, category_id, uploaded_by, title, description, created_at
 		FROM documents
 		WHERE created_at::date = $1
+		ORDER BY created_at DESC
 	`
 
 	if err := r.db.SelectContext(ctx, &results, query, payload.Date); err != nil {
