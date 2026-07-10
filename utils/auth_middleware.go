@@ -21,7 +21,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
 				accessToken = authHeader[7:]
 			} else {
-				ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", err)
+				ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", nil)
 				c.Abort()
 				return
 			}
@@ -29,7 +29,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		claims, err := token.ParseAccessToken(accessToken)
 		if err != nil {
-			ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", err)
+			ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", nil)
 			c.Abort()
 			return
 		}

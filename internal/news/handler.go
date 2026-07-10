@@ -24,6 +24,13 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
+	userID, ok := utils.UserIDFromContext(c)
+	if !ok {
+		utils.ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	payload.UploadedBy = userID
+
 	if err := h.service.Create(c.Request.Context(), payload); err != nil {
 		handleNewsError(c, err, "Failed to create news")
 		return

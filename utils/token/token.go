@@ -29,6 +29,7 @@ var (
 	ErrInvalidToken   = errors.New("invalid token")
 	ErrExpiredToken   = errors.New("expired token")
 	ErrInvalidSigning = errors.New("invalid token signing method")
+	ErrMissingSecret  = errors.New("jwt secret is required")
 )
 
 type Claims struct {
@@ -96,7 +97,12 @@ func generateToken(userID uint, username, role, tokenType string, expiration tim
 		ExpiresAt: now.Add(expiration).Unix(),
 	}
 
-	return generate(claims, secret())
+	jwtSecret, err := secret()
+	if err != nil {
+		return "", err
+	}
+
+	return generate(claims, jwtSecret)
 }
 
 func ParseAccessToken(accessToken string) (*Claims, error) {
@@ -113,8 +119,13 @@ func parse(value, expectedTokenType string) (*Claims, error) {
 		return nil, ErrInvalidToken
 	}
 
+	jwtSecret, err := secret()
+	if err != nil {
+		return nil, err
+	}
+
 	signingInput := parts[0] + "." + parts[1]
-	expectedSignature := sign(signingInput, secret())
+	expectedSignature := sign(signingInput, jwtSecret)
 	if !hmac.Equal([]byte(parts[2]), []byte(expectedSignature)) {
 		return nil, ErrInvalidToken
 	}
@@ -190,11 +201,25 @@ func sign(value, secret string) string {
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
-func secret() string {
+func secret() (string, error) {
 	value := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if value == "" {
-		return defaultSecret
+		if isProduction() {
+			return "", ErrMissingSecret
+		}
+		return defaultSecret, nil
 	}
 
-	return value
+	return value, nil
+}
+
+func isProduction() bool {
+	for _, key := range []string{"APP_ENV", "GO_ENV", "GIN_MODE"} {
+		value := strings.TrimSpace(os.Getenv(key))
+		if strings.EqualFold(value, "production") || strings.EqualFold(value, "release") {
+			return true
+		}
+	}
+
+	return false
 }

@@ -3,7 +3,7 @@ package potential
 import "time"
 
 type AddPotentialPayload struct {
-	UploadedBy  uint    `db:"uploaded_by" json:"uploaded_by" binding:"required"`
+	UploadedBy  uint    `db:"uploaded_by" json:"uploaded_by"`
 	CategoryID  uint    `db:"category_id" json:"category_id" binding:"required"`
 	Title       string  `db:"title" json:"title" binding:"required"`
 	Subtitle    string  `db:"subtitle" json:"subtitle"`

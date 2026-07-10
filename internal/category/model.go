@@ -2,14 +2,12 @@ package category
 
 type AddCategoryPayload struct {
 	Name string `json:"name" binding:"required"`
-	Slug string `json:"slug" binding:"required"`
 	Type string `json:"type" binding:"required"`
 }
 
 type EditCategoryPayload struct {
 	ID   uint   `json:"id"`
 	Name string `json:"name" binding:"required"`
-	Slug string `json:"slug" binding:"required"`
 	Type string `json:"type" binding:"required"`
 }
 

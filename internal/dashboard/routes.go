@@ -10,7 +10,7 @@ func (h *Handler) RegisterRoutes(router *gin.RouterGroup) {
 	{
 		dashboard.POST("/create", h.Create)
 		dashboard.POST("/list", h.List)
-		dashboard.POST("/find", h.FindByID)
+		dashboard.POST("/detail", h.FindByID)
 		dashboard.POST("/update", h.Update)
 		dashboard.POST("/delete", h.Delete)
 	}

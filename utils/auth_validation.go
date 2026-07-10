@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unicode"
 )
 
 const (
@@ -86,33 +85,33 @@ func ValidateAuthUsername(username string) error {
 }
 
 func ValidateAuthPassword(password string) error {
-	if strings.TrimSpace(password) != password {
-		return fmt.Errorf("%w: password must not start or end with whitespace", ErrInvalidAuthPayload)
-	}
+	// if strings.TrimSpace(password) != password {
+	// 	return fmt.Errorf("%w: password must not start or end with whitespace", ErrInvalidAuthPayload)
+	// }
 
-	if len(password) < minAuthPasswordLength {
-		return fmt.Errorf("%w: password must be at least %d characters", ErrInvalidAuthPayload, minAuthPasswordLength)
-	}
+	// if len(password) < minAuthPasswordLength {
+	// 	return fmt.Errorf("%w: password must be at least %d characters", ErrInvalidAuthPayload, minAuthPasswordLength)
+	// }
 
-	if len(password) > maxAuthPasswordLength {
-		return fmt.Errorf("%w: password must be at most %d characters", ErrInvalidAuthPayload, maxAuthPasswordLength)
-	}
+	// if len(password) > maxAuthPasswordLength {
+	// 	return fmt.Errorf("%w: password must be at most %d characters", ErrInvalidAuthPayload, maxAuthPasswordLength)
+	// }
 
-	var hasLetter, hasNumber, hasSymbol bool
-	for _, char := range password {
-		switch {
-		case unicode.IsLetter(char):
-			hasLetter = true
-		case unicode.IsNumber(char):
-			hasNumber = true
-		case unicode.IsPunct(char) || unicode.IsSymbol(char):
-			hasSymbol = true
-		}
-	}
+	// var hasLetter, hasNumber, hasSymbol bool
+	// for _, char := range password {
+	// 	switch {
+	// 	case unicode.IsLetter(char):
+	// 		hasLetter = true
+	// 	case unicode.IsNumber(char):
+	// 		hasNumber = true
+	// 	case unicode.IsPunct(char) || unicode.IsSymbol(char):
+	// 		hasSymbol = true
+	// 	}
+	// }
 
-	if !hasLetter || !hasNumber || !hasSymbol {
-		return fmt.Errorf("%w: password must contain letters, numbers, and symbols", ErrInvalidAuthPayload)
-	}
+	// if !hasLetter || !hasNumber || !hasSymbol {
+	// 	return fmt.Errorf("%w: password must contain letters, numbers, and symbols", ErrInvalidAuthPayload)
+	// }
 
 	return nil
 }

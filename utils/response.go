@@ -33,7 +33,7 @@ func SuccessResponse(c *gin.Context, statusCode int, message string, data interf
 
 func ErrorResponseJSON(c *gin.Context, statusCode int, message string, err error) {
 	var errStr string
-	if err != nil {
+	if err != nil && statusCode < http.StatusInternalServerError {
 		errStr = err.Error()
 	}
 	c.JSON(statusCode, ErrorResponse{

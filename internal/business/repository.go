@@ -1,0 +1,152 @@
+package business
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+
+	"cipicung.id/be/pkg/models"
+	"github.com/jmoiron/sqlx"
+)
+
+var ErrBusinessNotFound = errors.New("business not found")
+
+type Repository interface {
+	Create(ctx context.Context, payload AddBusinessPayload) error
+	List(ctx context.Context, payload ListBusinessPayload) ([]models.Business, error)
+	FindByID(ctx context.Context, payload BusinessPayload) (*models.Business, error)
+	Update(ctx context.Context, payload EditBusinessPayload) error
+	Delete(ctx context.Context, payload BusinessPayload) error
+}
+
+type repository struct {
+	db *sqlx.DB
+}
+
+func NewRepository(db *sqlx.DB) Repository {
+	return &repository{db: db}
+}
+
+func (r *repository) Create(ctx context.Context, payload AddBusinessPayload) error {
+	query := `
+		INSERT INTO businesses (
+			category_id,
+			owner_name,
+			business_name,
+			description,
+			phone,
+			address,
+			instagram,
+			facebook
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+
+	_, err := r.db.ExecContext(ctx, query,
+		payload.CategoryID,
+		payload.OwnerName,
+		payload.BusinessName,
+		payload.Description,
+		payload.Phone,
+		payload.Address,
+		payload.Instagram,
+		payload.Facebook,
+	)
+	return err
+}
+
+func (r *repository) List(ctx context.Context, payload ListBusinessPayload) ([]models.Business, error) {
+	var results []models.Business
+
+	query := `
+		SELECT b.id, b.category_id, b.owner_name, b.business_name, b.description, b.phone, b.address, b.instagram, b.facebook, b.created_at
+		FROM businesses b
+		LEFT JOIN categories c ON b.category_id = c.id
+		WHERE ($3 = '' OR c.slug = $3)
+		ORDER BY b.id DESC
+		LIMIT $1 OFFSET $2
+	`
+
+	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index, payload.Type); err != nil {
+		return nil, err
+	}
+	return results, nil
+}
+
+func (r *repository) FindByID(ctx context.Context, payload BusinessPayload) (*models.Business, error) {
+	var result models.Business
+
+	query := `
+		SELECT id, category_id, owner_name, business_name, description, phone, address, instagram, facebook, created_at
+		FROM businesses
+		WHERE id = $1
+	`
+
+	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrBusinessNotFound
+		}
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (r *repository) Update(ctx context.Context, payload EditBusinessPayload) error {
+	query := `
+		UPDATE businesses
+		SET category_id = $2,
+			owner_name = COALESCE($3, owner_name),
+			business_name = COALESCE($4, business_name),
+			description = COALESCE($5, description),
+			phone = COALESCE($6, phone),
+			address = COALESCE($7, address),
+			instagram = COALESCE($8, instagram),
+			facebook = COALESCE($9, facebook)
+		WHERE id = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query,
+		payload.ID,
+		payload.CategoryID,
+		payload.OwnerName,
+		payload.BusinessName,
+		payload.Description,
+		payload.Phone,
+		payload.Address,
+		payload.Instagram,
+		payload.Facebook,
+	)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrBusinessNotFound
+	}
+	return nil
+}
+
+func (r *repository) Delete(ctx context.Context, payload BusinessPayload) error {
+	query := `
+		DELETE FROM businesses
+		WHERE id = $1
+	`
+
+	result, err := r.db.ExecContext(ctx, query, payload.ID)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrBusinessNotFound
+	}
+	return nil
+}

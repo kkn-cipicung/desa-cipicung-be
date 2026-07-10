@@ -4,11 +4,21 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
+const maxUploadSize = 5 * 1024 * 1024
+
+var allowedMimeTypes = map[string]string{
+	"image/jpeg": ".jpg",
+	"image/png":  ".png",
+	"image/gif":  ".gif",
+	"image/webp": ".webp",
+}
 
 func SaveBase64(b64 string, uploadDir string) (string, string, error) {
 	if b64 == "" {
@@ -34,13 +44,21 @@ func SaveBase64(b64 string, uploadDir string) (string, string, error) {
 		return "", "", fmt.Errorf("failed to decode base64: %w", err)
 	}
 
-	ext := ".jpg"
-	if strings.Contains(mimeType, "png") {
-		ext = ".png"
-	} else if strings.Contains(mimeType, "gif") {
-		ext = ".gif"
-	} else if strings.Contains(mimeType, "webp") {
-		ext = ".webp"
+	if len(data) > maxUploadSize {
+		return "", "", fmt.Errorf("file size must be at most %d bytes", maxUploadSize)
+	}
+
+	detectedMimeType := http.DetectContentType(data)
+	ext, ok := allowedMimeTypes[detectedMimeType]
+	if !ok {
+		return "", "", errors.New("unsupported image type")
+	}
+
+	if mimeType != detectedMimeType {
+		if _, ok := allowedMimeTypes[mimeType]; !ok {
+			return "", "", errors.New("unsupported image type")
+		}
+		mimeType = detectedMimeType
 	}
 
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
