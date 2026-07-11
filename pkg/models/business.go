@@ -15,6 +15,7 @@ type Business struct {
 	Instagram    string    `db:"instagram" json:"instagram"`
 	Facebook     string    `db:"facebook" json:"facebook"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	CategoryName string    `db:"category_name" json:"category_name"`
 
 	// Relations
 	Category *Category `db:"-" json:"category,omitempty"`

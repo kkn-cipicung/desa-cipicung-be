@@ -36,10 +36,12 @@ type NewsByDatePayload struct {
 }
 
 type NewsResponse struct {
-	ID          uint      `db:"id" json:"id"`
-	CategoryID  uint      `db:"category_id" json:"category_id"`
-	UploadedBy  uint      `db:"uploaded_by" json:"uploaded_by"`
-	Title       string    `db:"title" json:"title"`
-	Description string    `db:"description" json:"description"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	ID           uint      `db:"id" json:"id"`
+	CategoryID   uint      `db:"category_id" json:"category_id"`
+	CategoryName string    `db:"category_name" json:"category_name"`
+	UploadedBy   uint      `db:"uploaded_by" json:"uploaded_by"`
+	UploaderName string    `db:"uploader_name" json:"uploader_name"`
+	Title        string    `db:"title" json:"title"`
+	Description  string    `db:"description" json:"description"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 }

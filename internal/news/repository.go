@@ -59,9 +59,11 @@ func (r *repository) List(ctx context.Context, payload ListNewsPayload) ([]NewsR
 	var results []NewsResponse
 
 	query := `
-		SELECT id, category_id, uploaded_by, title, description, created_at
-		FROM documents
-		ORDER BY created_at DESC
+		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.created_at
+		FROM documents d
+		LEFT JOIN users u ON d.uploaded_by = u.id
+		LEFT JOIN categories c ON d.category_id = c.id
+		ORDER BY d.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
 
@@ -76,9 +78,11 @@ func (r *repository) FindByID(ctx context.Context, payload NewsByIdPayload) (*Ne
 	var result NewsResponse
 
 	query := `
-		SELECT id, category_id, uploaded_by, title, description, created_at
-		FROM documents
-		WHERE id = $1
+		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.created_at
+		FROM documents d
+		LEFT JOIN users u ON d.uploaded_by = u.id
+		LEFT JOIN categories c ON d.category_id = c.id
+		WHERE d.id = $1
 	`
 
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
@@ -178,10 +182,12 @@ func (r *repository) FindByDate(ctx context.Context, payload NewsByDatePayload) 
 	var results []NewsResponse
 
 	query := `
-		SELECT id, category_id, uploaded_by, title, description, created_at
-		FROM documents
-		WHERE created_at::date = $1
-		ORDER BY created_at DESC
+		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.created_at
+		FROM documents d
+		LEFT JOIN users u ON d.uploaded_by = u.id
+		LEFT JOIN categories c ON d.category_id = c.id
+		WHERE d.created_at::date = $1
+		ORDER BY d.created_at DESC
 	`
 
 	if err := r.db.SelectContext(ctx, &results, query, payload.Date); err != nil {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -13,6 +14,7 @@ import (
 	"cipicung.id/be/internal/dashboard"
 	"cipicung.id/be/internal/news"
 	"cipicung.id/be/internal/potential"
+	"cipicung.id/be/utils"
 )
 
 func setupRouter(r *gin.Engine, db *sqlx.DB) {
@@ -40,9 +42,7 @@ func setupRouter(r *gin.Engine, db *sqlx.DB) {
 	api := r.Group("/api")
 
 	api.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"message": "pong",
-		})
+		utils.SuccessResponse(c, http.StatusOK, "pong", nil)
 	})
 
 	authRepository := auth.NewRepository(db)

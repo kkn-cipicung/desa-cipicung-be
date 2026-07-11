@@ -8,11 +8,13 @@ import (
 )
 
 type Response struct {
+	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
 type ErrorResponse struct {
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Error   string `json:"error,omitempty"`
 }
@@ -26,6 +28,7 @@ var (
 
 func SuccessResponse(c *gin.Context, statusCode int, message string, data interface{}) {
 	c.JSON(statusCode, Response{
+		Code:    statusCode,
 		Message: message,
 		Data:    data,
 	})
@@ -37,6 +40,7 @@ func ErrorResponseJSON(c *gin.Context, statusCode int, message string, err error
 		errStr = err.Error()
 	}
 	c.JSON(statusCode, ErrorResponse{
+		Code:    statusCode,
 		Message: message,
 		Error:   errStr,
 	})

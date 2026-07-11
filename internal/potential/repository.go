@@ -70,9 +70,10 @@ func (r *repository) List(ctx context.Context, payload ListPotentialPayload) ([]
 	var results []PotentialResponse
 
 	query := `
-		SELECT id, category_id, title, subtitle, slug, description, location_id, owner_name, owner_msisdn, media_id, created_at
-		FROM potentials
-		ORDER BY id DESC
+		SELECT p.id, p.category_id, COALESCE(c.name, '') AS category_name, p.title, p.subtitle, p.slug, p.description, p.location_id, p.owner_name, p.owner_msisdn, p.media_id, p.created_at
+		FROM potentials p
+		LEFT JOIN categories c ON p.category_id = c.id
+		ORDER BY p.id DESC
 		LIMIT $1 OFFSET $2
 	`
 
@@ -87,9 +88,10 @@ func (r *repository) FindByID(ctx context.Context, payload PotentialPayload) (*P
 	var result PotentialResponse
 
 	query := `
-		SELECT id, category_id, title, subtitle, slug, description, location_id, owner_name, owner_msisdn, media_id, created_at
-		FROM potentials
-		WHERE id = $1
+		SELECT p.id, p.category_id, COALESCE(c.name, '') AS category_name, p.title, p.subtitle, p.slug, p.description, p.location_id, p.owner_name, p.owner_msisdn, p.media_id, p.created_at
+		FROM potentials p
+		LEFT JOIN categories c ON p.category_id = c.id
+		WHERE p.id = $1
 	`
 
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {

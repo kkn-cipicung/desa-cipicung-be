@@ -59,7 +59,7 @@ func (r *repository) List(ctx context.Context, payload ListBusinessPayload) ([]m
 	var results []models.Business
 
 	query := `
-		SELECT b.id, b.category_id, b.owner_name, b.business_name, b.description, b.phone, b.address, b.instagram, b.facebook, b.created_at
+		SELECT b.id, b.category_id, COALESCE(c.name, '') AS category_name, b.owner_name, b.business_name, b.description, b.phone, b.address, b.instagram, b.facebook, b.created_at
 		FROM businesses b
 		LEFT JOIN categories c ON b.category_id = c.id
 		WHERE ($3 = '' OR c.slug = $3)
@@ -77,9 +77,10 @@ func (r *repository) FindByID(ctx context.Context, payload BusinessPayload) (*mo
 	var result models.Business
 
 	query := `
-		SELECT id, category_id, owner_name, business_name, description, phone, address, instagram, facebook, created_at
-		FROM businesses
-		WHERE id = $1
+		SELECT b.id, b.category_id, COALESCE(c.name, '') AS category_name, b.owner_name, b.business_name, b.description, b.phone, b.address, b.instagram, b.facebook, b.created_at
+		FROM businesses b
+		LEFT JOIN categories c ON b.category_id = c.id
+		WHERE b.id = $1
 	`
 
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {

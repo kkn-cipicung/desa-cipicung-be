@@ -59,9 +59,11 @@ func (r *repository) List(ctx context.Context, payload ListDashboardPayload) ([]
 	var results []DashboardResponse
 
 	query := `
-		SELECT id, created_by, category_id, title, description, created_at
-		FROM galleries
-		ORDER BY id DESC
+		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, g.created_at
+		FROM galleries g
+		LEFT JOIN users u ON g.created_by = u.id
+		LEFT JOIN categories c ON g.category_id = c.id
+		ORDER BY g.id DESC
 		LIMIT $1 OFFSET $2
 	`
 
@@ -76,9 +78,11 @@ func (r *repository) FindByID(ctx context.Context, payload DashboardPayload) (*D
 	var result DashboardResponse
 
 	query := `
-		SELECT id, created_by, category_id, title, description, created_at
-		FROM galleries
-		WHERE id = $1
+		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, g.created_at
+		FROM galleries g
+		LEFT JOIN users u ON g.created_by = u.id
+		LEFT JOIN categories c ON g.category_id = c.id
+		WHERE g.id = $1
 	`
 
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
