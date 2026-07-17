@@ -6,12 +6,12 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(router *gin.RouterGroup) {
-	business := router.Group("/business", utils.AuthMiddleware())
+	business := router.Group("/business")
 	{
-		business.POST("/create", h.Create)
+		business.POST("/create", utils.AuthMiddleware(), h.Create)
 		business.POST("/list", h.List)
 		business.POST("/detail", h.FindByID)
-		business.POST("/update", h.Update)
-		business.POST("/delete", h.Delete)
+		business.POST("/update", utils.AuthMiddleware(), h.Update)
+		business.POST("/delete", utils.AuthMiddleware(), h.Delete)
 	}
 }
