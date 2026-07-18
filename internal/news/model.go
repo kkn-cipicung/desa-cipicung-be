@@ -3,19 +3,19 @@ package news
 import "time"
 
 type AddNewsPayload struct {
-	UploadedBy  uint   `db:"uploaded_by" json:"uploaded_by"`
-	CategoryID  uint   `db:"category_id" json:"category_id" binding:"required"`
-	Title       string `db:"title" json:"title" binding:"required"`
-	Description string `db:"description" json:"description" binding:"required"`
-	ImgID       string `json:"img_id"`
+	UploadedBy  uint    `db:"uploaded_by" json:"uploaded_by"`
+	CategoryID  uint    `db:"category_id" json:"category_id" binding:"required"`
+	Title       string  `db:"title" json:"title" binding:"required"`
+	Description string  `db:"description" json:"description" binding:"required"`
+	MediaID     *string `json:"media_id"`
 }
 
 type EditNewsPayload struct {
-	ID          uint   `db:"id" json:"id" binding:"required"`
-	CategoryID  uint   `db:"category_id" json:"category_id" binding:"required"`
-	Title       string `db:"title" json:"title" binding:"required"`
-	Description string `db:"description" json:"description" binding:"required"`
-	ImgID       string `json:"img_id"`
+	ID          uint    `db:"id" json:"id" binding:"required"`
+	CategoryID  uint    `db:"category_id" json:"category_id" binding:"required"`
+	Title       string  `db:"title" json:"title" binding:"required"`
+	Description string  `db:"description" json:"description" binding:"required"`
+	MediaID     *string `json:"media_id"`
 }
 
 type NewsPayload struct {
@@ -43,5 +43,21 @@ type NewsResponse struct {
 	UploaderName string    `db:"uploader_name" json:"uploader_name"`
 	Title        string    `db:"title" json:"title"`
 	Description  string    `db:"description" json:"description"`
+	MediaID      *uint     `db:"media_id" json:"media_id"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+}
+
+type NewsOutput struct {
+	ID          uint    `json:"id"`
+	Category    NewsRef `json:"category"`
+	Uploader    NewsRef `json:"uploader"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	MediaID     *uint   `json:"media_id"`
+	CreatedAt   string  `json:"created_at"`
+}
+
+type NewsRef struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
 }

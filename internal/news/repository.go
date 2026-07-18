@@ -44,7 +44,7 @@ func (r *repository) Create(ctx context.Context, payload AddNewsPayload, media *
 	}
 
 	documentQuery := `
-		INSERT INTO documents (category_id, uploaded_by, title, description, img_id)
+		INSERT INTO documents (category_id, uploaded_by, title, description, media_id)
 		VALUES ($1, $2, $3, $4, $5)
 	`
 	_, err = tx.ExecContext(ctx, documentQuery, payload.CategoryID, payload.UploadedBy, payload.Title, payload.Description, mediaID)
@@ -59,7 +59,7 @@ func (r *repository) List(ctx context.Context, payload ListNewsPayload) ([]NewsR
 	var results []NewsResponse
 
 	query := `
-		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.created_at
+		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.media_id, d.created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
@@ -78,7 +78,7 @@ func (r *repository) FindByID(ctx context.Context, payload NewsByIdPayload) (*Ne
 	var result NewsResponse
 
 	query := `
-		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.created_at
+		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.media_id, d.created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
@@ -113,7 +113,7 @@ func (r *repository) Update(ctx context.Context, payload EditNewsPayload, media 
 			SET category_id = $2,
 				title = $3,
 				description = $4,
-				img_id = $5
+				media_id = $5
 			WHERE id = $1
 		`
 		result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description, *mediaID)
@@ -182,7 +182,7 @@ func (r *repository) FindByDate(ctx context.Context, payload NewsByDatePayload) 
 	var results []NewsResponse
 
 	query := `
-		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.created_at
+		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.media_id, d.created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id

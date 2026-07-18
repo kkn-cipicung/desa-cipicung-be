@@ -18,6 +18,7 @@ type Media struct {
 	Caption      string    `db:"caption" json:"caption"`
 	OrderNumber  int       `db:"order_number" json:"order_number"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
 
 	// Relations
 	Uploader *User `db:"-" json:"uploader,omitempty"`

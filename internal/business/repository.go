@@ -36,10 +36,11 @@ func (r *repository) Create(ctx context.Context, payload AddBusinessPayload) err
 			description,
 			phone,
 			address,
+			location_id,
 			instagram,
 			facebook
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -49,6 +50,7 @@ func (r *repository) Create(ctx context.Context, payload AddBusinessPayload) err
 		payload.Description,
 		payload.Phone,
 		payload.Address,
+		payload.LocationID,
 		payload.Instagram,
 		payload.Facebook,
 	)
@@ -59,7 +61,7 @@ func (r *repository) List(ctx context.Context, payload ListBusinessPayload) ([]m
 	var results []models.Business
 
 	query := `
-		SELECT b.id, b.category_id, COALESCE(c.name, '') AS category_name, b.owner_name, b.business_name, b.description, b.phone, b.address, b.instagram, b.facebook, b.created_at
+		SELECT b.id, b.category_id, COALESCE(c.name, '') AS category_name, b.owner_name, b.business_name, b.description, b.phone, b.address, b.location_id, b.instagram, b.facebook, b.created_at
 		FROM businesses b
 		LEFT JOIN categories c ON b.category_id = c.id
 		WHERE ($3 = '' OR c.slug = $3)
@@ -77,7 +79,7 @@ func (r *repository) FindByID(ctx context.Context, payload BusinessPayload) (*mo
 	var result models.Business
 
 	query := `
-		SELECT b.id, b.category_id, COALESCE(c.name, '') AS category_name, b.owner_name, b.business_name, b.description, b.phone, b.address, b.instagram, b.facebook, b.created_at
+		SELECT b.id, b.category_id, COALESCE(c.name, '') AS category_name, b.owner_name, b.business_name, b.description, b.phone, b.address, b.location_id, b.instagram, b.facebook, b.created_at
 		FROM businesses b
 		LEFT JOIN categories c ON b.category_id = c.id
 		WHERE b.id = $1
@@ -101,8 +103,9 @@ func (r *repository) Update(ctx context.Context, payload EditBusinessPayload) er
 			description = COALESCE($5, description),
 			phone = COALESCE($6, phone),
 			address = COALESCE($7, address),
-			instagram = COALESCE($8, instagram),
-			facebook = COALESCE($9, facebook)
+			location_id = COALESCE($8, location_id),
+			instagram = COALESCE($9, instagram),
+			facebook = COALESCE($10, facebook)
 		WHERE id = $1
 	`
 
@@ -114,6 +117,7 @@ func (r *repository) Update(ctx context.Context, payload EditBusinessPayload) er
 		payload.Description,
 		payload.Phone,
 		payload.Address,
+		payload.LocationID,
 		payload.Instagram,
 		payload.Facebook,
 	)

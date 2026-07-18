@@ -10,6 +10,7 @@ type Category struct {
 	Slug      string    `db:"slug" json:"slug"` // url friendly
 	Type      string    `db:"type" json:"type"` // news, document, business
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 
 	// Relations
 	Posts      []Post      `db:"-" json:"posts,omitempty"`

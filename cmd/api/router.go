@@ -21,6 +21,7 @@ func setupRouter(r *gin.Engine, db *sqlx.DB) {
 	corsConfig := cors.Config{
 		AllowOrigins: []string{
 			"http://localhost:5173",
+			"http://127.0.0.1:5173",
 			"http://localhost:3020",
 			"https://admin.cipicung.id",
 			"https://cipicung.id",

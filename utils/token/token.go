@@ -21,7 +21,7 @@ const (
 
 	defaultIssuer            = "cipicung.id"
 	defaultSecret            = "cipicung-dev-secret"
-	defaultAccessExpiration  = 15 * time.Minute
+	defaultAccessExpiration  = 7 * 24 * time.Hour
 	defaultRefreshExpiration = 7 * 24 * time.Hour
 )
 

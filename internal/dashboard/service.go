@@ -10,9 +10,11 @@ import (
 
 type Service interface {
 	Create(ctx context.Context, payload AddDashboardPayload) error
-	List(ctx context.Context, payload ListDashboardPayload) ([]DashboardResponse, error)
-	FindByID(ctx context.Context, payload DashboardPayload) (*DashboardResponse, error)
+	List(ctx context.Context, payload ListDashboardPayload) ([]DashboardOutput, error)
+	Detail(ctx context.Context) (*DashboardOutput, error)
+	FindActive(ctx context.Context) (*DashboardOutput, error)
 	Update(ctx context.Context, payload EditDashboardPayload) error
+	Activate(ctx context.Context, payload DashboardPayload) error
 	Delete(ctx context.Context, payload DashboardPayload) error
 }
 
@@ -41,7 +43,7 @@ func (s *service) Create(ctx context.Context, payload AddDashboardPayload) error
 		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
 	}
 
-	media, err := utils.PrepareMedia(payload.ImgID, "uploads/dashboard", payload.CreatedBy)
+	media, err := utils.PrepareMedia(payload.MediaID, "uploads/dashboard", payload.CreatedBy)
 	if err != nil {
 		return err
 	}
@@ -49,16 +51,36 @@ func (s *service) Create(ctx context.Context, payload AddDashboardPayload) error
 	return s.repository.Create(ctx, payload, media)
 }
 
-func (s *service) List(ctx context.Context, payload ListDashboardPayload) ([]DashboardResponse, error) {
+func (s *service) List(ctx context.Context, payload ListDashboardPayload) ([]DashboardOutput, error) {
 	utils.NormalizePagination(&payload.Limit, &payload.Index)
-	return s.repository.List(ctx, payload)
+	items, err := s.repository.List(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	outputs := make([]DashboardOutput, 0, len(items))
+	for _, item := range items {
+		outputs = append(outputs, mapDashboardOutput(item))
+	}
+	return outputs, nil
 }
 
-func (s *service) FindByID(ctx context.Context, payload DashboardPayload) (*DashboardResponse, error) {
-	if payload.ID == 0 {
-		return nil, fmt.Errorf("%w: dashboard id must be greater than 0", utils.ErrInvalidPayload)
+func (s *service) Detail(ctx context.Context) (*DashboardOutput, error) {
+	item, err := s.repository.Detail(ctx)
+	if err != nil {
+		return nil, err
 	}
-	return s.repository.FindByID(ctx, payload)
+	output := mapDashboardOutput(*item)
+	return &output, nil
+}
+
+func (s *service) FindActive(ctx context.Context) (*DashboardOutput, error) {
+	item, err := s.repository.FindActive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	output := mapDashboardOutput(*item)
+	return &output, nil
 }
 
 func (s *service) Update(ctx context.Context, payload EditDashboardPayload) error {
@@ -78,7 +100,7 @@ func (s *service) Update(ctx context.Context, payload EditDashboardPayload) erro
 		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
 	}
 
-	media, err := utils.PrepareMedia(payload.ImgID, "uploads/dashboard", 0)
+	media, err := utils.PrepareMedia(payload.MediaID, "uploads/dashboard", 0)
 	if err != nil {
 		return err
 	}
@@ -86,9 +108,35 @@ func (s *service) Update(ctx context.Context, payload EditDashboardPayload) erro
 	return s.repository.Update(ctx, payload, media)
 }
 
+func (s *service) Activate(ctx context.Context, payload DashboardPayload) error {
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: dashboard id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	return s.repository.Activate(ctx, payload)
+}
+
 func (s *service) Delete(ctx context.Context, payload DashboardPayload) error {
 	if payload.ID == 0 {
 		return fmt.Errorf("%w: dashboard id must be greater than 0", utils.ErrInvalidPayload)
 	}
 	return s.repository.Delete(ctx, payload)
+}
+
+func mapDashboardOutput(item DashboardResponse) DashboardOutput {
+	return DashboardOutput{
+		ID: item.ID,
+		Creator: DashboardRef{
+			ID:   item.CreatedBy,
+			Name: item.CreatorName,
+		},
+		Category: DashboardRef{
+			ID:   item.CategoryID,
+			Name: item.CategoryName,
+		},
+		Title:       item.Title,
+		Description: item.Description,
+		MediaID:     item.MediaID,
+		IsActive:    item.IsActive,
+		CreatedAt:   utils.FormatTimestamp(item.CreatedAt),
+	}
 }

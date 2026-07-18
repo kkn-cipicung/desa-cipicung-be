@@ -10,11 +10,12 @@ type Document struct {
 	UploadedBy  uint      `db:"uploaded_by" json:"uploaded_by"`
 	Title       string    `db:"title" json:"title"`
 	Description string    `db:"description" json:"description"`
-	ImgID       uint      `db:"img_id" json:"img_id"`
+	MediaID     *uint     `db:"media_id" json:"media_id"`
 	CreatedAt   time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
 
 	// Relations
 	Category *Category `db:"-" json:"category,omitempty"`
 	Uploader *User     `db:"-" json:"uploader,omitempty"`
-	Media    []Media   `db:"-" json:"media,omitempty"`
+	Media    *Media    `db:"-" json:"media,omitempty"`
 }

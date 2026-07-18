@@ -10,6 +10,7 @@ type ActivityLog struct {
 	Activity  string    `db:"activity" json:"activity"`
 	IP        string    `db:"ip" json:"ip"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 
 	// Relations
 	User *User `db:"-" json:"user,omitempty"`

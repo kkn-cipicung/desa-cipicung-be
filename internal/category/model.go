@@ -20,3 +20,11 @@ type ListCategoryPayload struct {
 	Index int    `form:"index" json:"index"`
 	Type  string `form:"type" json:"type"`
 }
+
+type CategoryResponse struct {
+	ID        uint   `json:"id"`
+	Name      string `json:"name"`
+	Slug      string `json:"slug"`
+	Type      string `json:"type"`
+	CreatedAt string `json:"created_at"`
+}

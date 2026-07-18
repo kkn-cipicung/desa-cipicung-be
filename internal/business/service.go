@@ -11,8 +11,8 @@ import (
 
 type Service interface {
 	Create(ctx context.Context, payload AddBusinessPayload) error
-	List(ctx context.Context, payload ListBusinessPayload) ([]models.Business, error)
-	FindByID(ctx context.Context, payload BusinessPayload) (*models.Business, error)
+	List(ctx context.Context, payload ListBusinessPayload) ([]BusinessResponse, error)
+	FindByID(ctx context.Context, payload BusinessPayload) (*BusinessResponse, error)
 	Update(ctx context.Context, payload EditBusinessPayload) error
 	Delete(ctx context.Context, payload BusinessPayload) error
 }
@@ -31,6 +31,9 @@ func (s *service) Create(ctx context.Context, payload AddBusinessPayload) error 
 	payload.Description = strings.TrimSpace(payload.Description)
 	payload.Phone = strings.TrimSpace(payload.Phone)
 	payload.Address = strings.TrimSpace(payload.Address)
+	if payload.LocationID != nil && *payload.LocationID == 0 {
+		payload.LocationID = nil
+	}
 
 	if payload.CategoryID == nil || *payload.CategoryID == 0 {
 		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
@@ -63,17 +66,26 @@ func (s *service) Create(ctx context.Context, payload AddBusinessPayload) error 
 	return s.repository.Create(ctx, payload)
 }
 
-func (s *service) List(ctx context.Context, payload ListBusinessPayload) ([]models.Business, error) {
+func (s *service) List(ctx context.Context, payload ListBusinessPayload) ([]BusinessResponse, error) {
 	utils.NormalizePagination(&payload.Limit, &payload.Index)
 	payload.Type = strings.TrimSpace(payload.Type)
-	return s.repository.List(ctx, payload)
+	items, err := s.repository.List(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+	return mapBusinessResponses(items), nil
 }
 
-func (s *service) FindByID(ctx context.Context, payload BusinessPayload) (*models.Business, error) {
+func (s *service) FindByID(ctx context.Context, payload BusinessPayload) (*BusinessResponse, error) {
 	if payload.ID == 0 {
 		return nil, fmt.Errorf("%w: business id must be greater than 0", utils.ErrInvalidPayload)
 	}
-	return s.repository.FindByID(ctx, payload)
+	item, err := s.repository.FindByID(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+	output := mapBusinessResponse(*item)
+	return &output, nil
 }
 
 func (s *service) Update(ctx context.Context, payload EditBusinessPayload) error {
@@ -124,6 +136,9 @@ func (s *service) Update(ctx context.Context, payload EditBusinessPayload) error
 		}
 		payload.Address = &trimmed
 	}
+	if payload.LocationID != nil && *payload.LocationID == 0 {
+		payload.LocationID = nil
+	}
 
 	if payload.Instagram != nil {
 		trimmed := strings.TrimSpace(*payload.Instagram)
@@ -142,4 +157,31 @@ func (s *service) Delete(ctx context.Context, payload BusinessPayload) error {
 		return fmt.Errorf("%w: business id must be greater than 0", utils.ErrInvalidPayload)
 	}
 	return s.repository.Delete(ctx, payload)
+}
+
+func mapBusinessResponses(items []models.Business) []BusinessResponse {
+	outputs := make([]BusinessResponse, 0, len(items))
+	for _, item := range items {
+		outputs = append(outputs, mapBusinessResponse(item))
+	}
+	return outputs
+}
+
+func mapBusinessResponse(item models.Business) BusinessResponse {
+	return BusinessResponse{
+		ID: item.ID,
+		Category: BusinessRef{
+			ID:   item.CategoryID,
+			Name: item.CategoryName,
+		},
+		OwnerName:    item.OwnerName,
+		BusinessName: item.BusinessName,
+		Description:  item.Description,
+		Phone:        item.Phone,
+		Address:      item.Address,
+		LocationID:   item.LocationID,
+		Instagram:    item.Instagram,
+		Facebook:     item.Facebook,
+		CreatedAt:    utils.FormatTimestamp(item.CreatedAt),
+	}
 }

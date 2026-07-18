@@ -11,8 +11,8 @@ import (
 
 type Service interface {
 	Create(ctx context.Context, payload AddCategoryPayload) error
-	List(ctx context.Context, payload ListCategoryPayload) ([]models.Category, error)
-	FindByID(ctx context.Context, payload CategoryPayload) (*models.Category, error)
+	List(ctx context.Context, payload ListCategoryPayload) ([]CategoryResponse, error)
+	FindByID(ctx context.Context, payload CategoryPayload) (*CategoryResponse, error)
 	Update(ctx context.Context, payload EditCategoryPayload) error
 	Delete(ctx context.Context, payload CategoryPayload) error
 }
@@ -40,16 +40,25 @@ func (s *service) Create(ctx context.Context, payload AddCategoryPayload) error 
 	return s.repository.Create(ctx, payload, slug)
 }
 
-func (s *service) List(ctx context.Context, payload ListCategoryPayload) ([]models.Category, error) {
+func (s *service) List(ctx context.Context, payload ListCategoryPayload) ([]CategoryResponse, error) {
 	utils.NormalizePagination(&payload.Limit, &payload.Index)
-	return s.repository.List(ctx, payload)
+	items, err := s.repository.List(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+	return mapCategoryResponses(items), nil
 }
 
-func (s *service) FindByID(ctx context.Context, payload CategoryPayload) (*models.Category, error) {
+func (s *service) FindByID(ctx context.Context, payload CategoryPayload) (*CategoryResponse, error) {
 	if payload.ID == 0 {
 		return nil, fmt.Errorf("%w: category id must be greater than 0", utils.ErrInvalidPayload)
 	}
-	return s.repository.FindByID(ctx, payload)
+	item, err := s.repository.FindByID(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+	output := mapCategoryResponse(*item)
+	return &output, nil
 }
 
 func (s *service) Update(ctx context.Context, payload EditCategoryPayload) error {
@@ -75,4 +84,22 @@ func (s *service) Delete(ctx context.Context, payload CategoryPayload) error {
 		return fmt.Errorf("%w: category id must be greater than 0", utils.ErrInvalidPayload)
 	}
 	return s.repository.Delete(ctx, payload)
+}
+
+func mapCategoryResponses(items []models.Category) []CategoryResponse {
+	outputs := make([]CategoryResponse, 0, len(items))
+	for _, item := range items {
+		outputs = append(outputs, mapCategoryResponse(item))
+	}
+	return outputs
+}
+
+func mapCategoryResponse(item models.Category) CategoryResponse {
+	return CategoryResponse{
+		ID:        item.ID,
+		Name:      item.Name,
+		Slug:      item.Slug,
+		Type:      item.Type,
+		CreatedAt: utils.FormatTimestamp(item.CreatedAt),
+	}
 }

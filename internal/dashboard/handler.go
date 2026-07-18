@@ -55,25 +55,24 @@ func (h *Handler) List(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Dashboards retrieved successfully", dashboards)
 }
 
-func (h *Handler) FindByID(c *gin.Context) {
-	var payload DashboardPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
-		return
-	}
-
-	if payload.ID == 0 {
-		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid dashboard ID", nil)
-		return
-	}
-
-	dashboard, err := h.service.FindByID(c.Request.Context(), payload)
+func (h *Handler) Detail(c *gin.Context) {
+	dashboard, err := h.service.Detail(c.Request.Context())
 	if err != nil {
 		handleDashboardError(c, err, "Failed to get dashboard")
 		return
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "Dashboard retrieved successfully", dashboard)
+}
+
+func (h *Handler) FindActive(c *gin.Context) {
+	dashboard, err := h.service.FindActive(c.Request.Context())
+	if err != nil {
+		handleDashboardError(c, err, "Failed to get active dashboard")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Active dashboard retrieved successfully", dashboard)
 }
 
 func (h *Handler) Update(c *gin.Context) {
@@ -94,6 +93,21 @@ func (h *Handler) Update(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "Dashboard updated successfully", nil)
+}
+
+func (h *Handler) Activate(c *gin.Context) {
+	var payload DashboardPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	if err := h.service.Activate(c.Request.Context(), payload); err != nil {
+		handleDashboardError(c, err, "Failed to activate dashboard")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Dashboard activated successfully", nil)
 }
 
 func (h *Handler) Delete(c *gin.Context) {

@@ -42,20 +42,25 @@ func (r *repository) Create(ctx context.Context, payload AddPotentialPayload, me
 		}
 	}
 
-	locationQuery := `
-		INSERT INTO locations (latitude, longitude, creator_id, title, description)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id
-	`
-	var locationID uint
-	err = tx.QueryRowContext(ctx, locationQuery, payload.Latitude, payload.Longitude, payload.UploadedBy, payload.Title, payload.Description).Scan(&locationID)
-	if err != nil {
-		return err
+	var locationID *uint
+	if payload.Location != nil {
+		locationID, err = utils.InsertLocation(ctx, tx, &utils.LocationPayload{
+			Latitude:    payload.Location.Latitude,
+			Longitude:   payload.Location.Longitude,
+			CreatedByID: &payload.UploadedBy,
+			Title:       payload.Location.Title,
+			Description: payload.Location.Description,
+		})
+		if err != nil {
+			return err
+		}
+	} else if payload.LocationID != 0 {
+		locationID = &payload.LocationID
 	}
 
 	query := `
-		INSERT INTO potentials (category_id, title, subtitle, slug, description, location_id, owner_name, owner_msisdn, media_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO potentials (category_id, title, subtitle, slug, description, location_id, owner_name, owner_msisdn, media_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 
 	_, err = tx.ExecContext(ctx, query, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID, payload.OwnerName, payload.OwnerMsisdn, mediaID)
@@ -70,7 +75,11 @@ func (r *repository) List(ctx context.Context, payload ListPotentialPayload) ([]
 	var results []PotentialResponse
 
 	query := `
-		SELECT p.id, p.category_id, COALESCE(c.name, '') AS category_name, p.title, p.subtitle, p.slug, p.description, p.location_id, p.owner_name, p.owner_msisdn, p.media_id, p.created_at
+		SELECT p.id, COALESCE(p.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(p.title, '') AS title, COALESCE(p.subtitle, '') AS subtitle,
+			COALESCE(p.slug, '') AS slug, COALESCE(p.description, '') AS description,
+			COALESCE(p.location_id, 0) AS location_id, COALESCE(p.owner_name, '') AS owner_name,
+			COALESCE(p.owner_msisdn, '') AS owner_msisdn, p.media_id, p.created_at
 		FROM potentials p
 		LEFT JOIN categories c ON p.category_id = c.id
 		ORDER BY p.id DESC
@@ -88,7 +97,11 @@ func (r *repository) FindByID(ctx context.Context, payload PotentialPayload) (*P
 	var result PotentialResponse
 
 	query := `
-		SELECT p.id, p.category_id, COALESCE(c.name, '') AS category_name, p.title, p.subtitle, p.slug, p.description, p.location_id, p.owner_name, p.owner_msisdn, p.media_id, p.created_at
+		SELECT p.id, COALESCE(p.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(p.title, '') AS title, COALESCE(p.subtitle, '') AS subtitle,
+			COALESCE(p.slug, '') AS slug, COALESCE(p.description, '') AS description,
+			COALESCE(p.location_id, 0) AS location_id, COALESCE(p.owner_name, '') AS owner_name,
+			COALESCE(p.owner_msisdn, '') AS owner_msisdn, p.media_id, p.created_at
 		FROM potentials p
 		LEFT JOIN categories c ON p.category_id = c.id
 		WHERE p.id = $1
@@ -111,23 +124,19 @@ func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, m
 	}
 	defer tx.Rollback()
 
-	var locationID uint
-	err = tx.QueryRowContext(ctx, "SELECT location_id FROM potentials WHERE id = $1", payload.ID).Scan(&locationID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ErrPotentialNotFound
+	var locationID *uint
+	if payload.Location != nil {
+		locationID, err = utils.InsertLocation(ctx, tx, &utils.LocationPayload{
+			Latitude:    payload.Location.Latitude,
+			Longitude:   payload.Location.Longitude,
+			Title:       payload.Location.Title,
+			Description: payload.Location.Description,
+		})
+		if err != nil {
+			return err
 		}
-		return err
-	}
-
-	updateLocationQuery := `
-		UPDATE locations
-		SET latitude = $2, longitude = $3, title = $4, description = $5
-		WHERE id = $1
-	`
-	_, err = tx.ExecContext(ctx, updateLocationQuery, locationID, payload.Latitude, payload.Longitude, payload.Title, payload.Description)
-	if err != nil {
-		return err
+	} else if payload.LocationID != 0 {
+		locationID = &payload.LocationID
 	}
 
 	if media != nil {
@@ -143,12 +152,13 @@ func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, m
 				subtitle = $4,
 				slug = $5,
 				description = $6,
-				owner_name = $7,
-				owner_msisdn = $8,
-				media_id = $9
+				location_id = COALESCE($7, location_id),
+				owner_name = $8,
+				owner_msisdn = $9,
+				media_id = $10
 			WHERE id = $1
 		`
-		result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, payload.OwnerName, payload.OwnerMsisdn, *mediaID)
+		result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID, payload.OwnerName, payload.OwnerMsisdn, *mediaID)
 		if err != nil {
 			return err
 		}
@@ -169,11 +179,12 @@ func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, m
 				subtitle = $4,
 				slug = $5,
 				description = $6,
-				owner_name = $7,
-				owner_msisdn = $8
+				location_id = COALESCE($7, location_id),
+				owner_name = $8,
+				owner_msisdn = $9
 			WHERE id = $1
 		`
-		result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, payload.OwnerName, payload.OwnerMsisdn)
+		result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID, payload.OwnerName, payload.OwnerMsisdn)
 		if err != nil {
 			return err
 		}

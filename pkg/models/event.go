@@ -19,6 +19,6 @@ type Event struct {
 	UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
 
 	// Relations
-	Author *User   `db:"-" json:"author,omitempty"`
-	Media  []Media `db:"-" json:"media,omitempty"`
+	Author *User  `db:"-" json:"author,omitempty"`
+	Media  *Media `db:"-" json:"media,omitempty"`
 }

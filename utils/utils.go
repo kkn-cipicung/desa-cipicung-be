@@ -21,12 +21,20 @@ type MediaPayload struct {
 	UploadedBy *uint
 }
 
-func PrepareMedia(imgBase64 string, uploadDir string, uploadedBy uint) (*MediaPayload, error) {
-	if imgBase64 == "" {
+type LocationPayload struct {
+	Latitude    float64
+	Longitude   float64
+	CreatedByID *uint
+	Title       string
+	Description string
+}
+
+func PrepareMedia(imgBase64 *string, uploadDir string, uploadedBy uint) (*MediaPayload, error) {
+	if imgBase64 == nil || *imgBase64 == "" {
 		return nil, nil
 	}
 
-	filePath, mimeType, err := file.SaveBase64(imgBase64, uploadDir)
+	filePath, mimeType, err := file.SaveBase64(*imgBase64, uploadDir)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +60,21 @@ func InsertMedia(ctx context.Context, tx *sqlx.Tx, media *MediaPayload) (*uint, 
 
 	var id uint
 	if err := tx.QueryRowContext(ctx, query, media.FilePath, media.MimeType, media.UploadedBy).Scan(&id); err != nil {
+		return nil, err
+	}
+
+	return &id, nil
+}
+
+func InsertLocation(ctx context.Context, tx *sqlx.Tx, location *LocationPayload) (*uint, error) {
+	query := `
+		INSERT INTO locations (latitude, longitude, created_by_id, title, description, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		RETURNING id
+	`
+
+	var id uint
+	if err := tx.QueryRowContext(ctx, query, location.Latitude, location.Longitude, location.CreatedByID, location.Title, location.Description).Scan(&id); err != nil {
 		return nil, err
 	}
 
