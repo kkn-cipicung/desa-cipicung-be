@@ -12,6 +12,7 @@ type AddDashboardPayload struct {
 
 type EditDashboardPayload struct {
 	ID          uint    `db:"id" json:"id"`
+	UpdatedBy   uint    `db:"-" json:"-"`
 	CategoryID  uint    `db:"category_id" json:"category_id" binding:"required"`
 	Title       string  `db:"title" json:"title" binding:"required"`
 	Description string  `db:"description" json:"description" binding:"required"`

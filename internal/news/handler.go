@@ -88,6 +88,13 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
+	userID, ok := utils.UserIDFromContext(c)
+	if !ok {
+		utils.ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	payload.UploadedBy = userID
+
 	if err := h.service.Update(c.Request.Context(), payload); err != nil {
 		handleNewsError(c, err, "Failed to update news")
 		return
@@ -143,6 +150,27 @@ func (h *Handler) FindByDate(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "News retrieved successfully", newsList)
+}
+
+func (h *Handler) FindHeader(c *gin.Context) {
+	var payload NewsByIdPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	if payload.ID == 0 {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid news ID", nil)
+		return
+	}
+
+	header, err := h.service.FindHeader(c.Request.Context(), payload)
+	if err != nil {
+		handleNewsError(c, err, "Failed to get news header")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "News header retrieved successfully", header)
 }
 
 func handleNewsError(c *gin.Context, err error, message string) {

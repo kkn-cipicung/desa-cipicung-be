@@ -11,6 +11,7 @@ func (h *Handler) RegisterRoutes(router *gin.RouterGroup) {
 		news.POST("/create", utils.AuthMiddleware(), h.Create)
 		news.POST("/list", h.List)
 		news.POST("/detail", h.FindByID)
+		news.POST("/header", h.FindHeader)
 		news.POST("/update", utils.AuthMiddleware(), h.Update)
 		news.POST("/delete", utils.AuthMiddleware(), h.Delete)
 		news.POST("/find-by-date", h.FindByDate)

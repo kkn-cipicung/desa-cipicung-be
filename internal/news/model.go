@@ -12,6 +12,7 @@ type AddNewsPayload struct {
 
 type EditNewsPayload struct {
 	ID          uint    `db:"id" json:"id" binding:"required"`
+	UploadedBy  uint    `db:"-" json:"-"`
 	CategoryID  uint    `db:"category_id" json:"category_id" binding:"required"`
 	Title       string  `db:"title" json:"title" binding:"required"`
 	Description string  `db:"description" json:"description" binding:"required"`
@@ -44,7 +45,13 @@ type NewsResponse struct {
 	Title        string    `db:"title" json:"title"`
 	Description  string    `db:"description" json:"description"`
 	MediaID      *uint     `db:"media_id" json:"media_id"`
+	Source       string    `db:"source" json:"source"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+}
+
+type NewsHeaderResponse struct {
+	ID    uint   `db:"id" json:"id"`
+	Title string `db:"title" json:"title"`
 }
 
 type NewsOutput struct {
@@ -54,6 +61,7 @@ type NewsOutput struct {
 	Title       string  `json:"title"`
 	Description string  `json:"description"`
 	MediaID     *uint   `json:"media_id"`
+	Source      string  `json:"source"`
 	CreatedAt   string  `json:"created_at"`
 }
 

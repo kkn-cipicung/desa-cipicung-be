@@ -27,7 +27,7 @@ func NewService(repository Repository) Service {
 
 func (s *service) Create(ctx context.Context, payload AddCategoryPayload) error {
 	payload.Name = strings.TrimSpace(payload.Name)
-	payload.Type = strings.TrimSpace(payload.Type)
+	payload.Type = strings.ToLower(strings.TrimSpace(payload.Type))
 
 	if payload.Name == "" {
 		return fmt.Errorf("%w: name is required", utils.ErrInvalidPayload)
@@ -42,6 +42,7 @@ func (s *service) Create(ctx context.Context, payload AddCategoryPayload) error 
 
 func (s *service) List(ctx context.Context, payload ListCategoryPayload) ([]CategoryResponse, error) {
 	utils.NormalizePagination(&payload.Limit, &payload.Index)
+	payload.Type = strings.ToLower(strings.TrimSpace(payload.Type))
 	items, err := s.repository.List(ctx, payload)
 	if err != nil {
 		return nil, err
@@ -63,7 +64,7 @@ func (s *service) FindByID(ctx context.Context, payload CategoryPayload) (*Categ
 
 func (s *service) Update(ctx context.Context, payload EditCategoryPayload) error {
 	payload.Name = strings.TrimSpace(payload.Name)
-	payload.Type = strings.TrimSpace(payload.Type)
+	payload.Type = strings.ToLower(strings.TrimSpace(payload.Type))
 
 	if payload.ID == 0 {
 		return fmt.Errorf("%w: category id must be greater than 0", utils.ErrInvalidPayload)

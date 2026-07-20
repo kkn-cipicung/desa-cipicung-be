@@ -88,6 +88,13 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
+	userID, ok := utils.UserIDFromContext(c)
+	if !ok {
+		utils.ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	payload.UploadedBy = userID
+
 	if err := h.service.Update(c.Request.Context(), payload); err != nil {
 		handlePotentialError(c, err, "Failed to update potential")
 		return

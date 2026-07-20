@@ -38,21 +38,23 @@ func (r *repository) Create(ctx context.Context, payload AddDashboardPayload, me
 	}
 	defer tx.Rollback()
 
-	var mediaID *uint
-	if media != nil {
-		mediaID, err = utils.InsertMedia(ctx, tx, media)
-		if err != nil {
-			return err
-		}
-	}
-
 	query := `
 		INSERT INTO galleries (created_by, category_id, title, description, media_id)
-		VALUES ($1, $2, $3, $4, $5)
+		SELECT $1, $2, $3, $4, NULL
+		FROM categories
+		WHERE id = $2 AND type = 'dashboard'
+		RETURNING id
 	`
 
-	_, err = tx.ExecContext(ctx, query, payload.CreatedBy, payload.CategoryID, payload.Title, payload.Description, mediaID)
-	if err != nil {
+	var dashboardID uint
+	if err := tx.QueryRowContext(ctx, query, payload.CreatedBy, payload.CategoryID, payload.Title, payload.Description).Scan(&dashboardID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrDashboardNotFound
+		}
+		return err
+	}
+
+	if _, err := utils.AttachMediaToEntityColumn(ctx, tx, media, "dashboard", dashboardID, "image", "galleries", "media_id"); err != nil {
 		return err
 	}
 
@@ -67,6 +69,7 @@ func (r *repository) List(ctx context.Context, payload ListDashboardPayload) ([]
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
+		WHERE c.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -86,6 +89,7 @@ func (r *repository) Detail(ctx context.Context) (*DashboardResponse, error) {
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
+		WHERE c.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT 1
 	`
@@ -108,7 +112,7 @@ func (r *repository) FindActive(ctx context.Context) (*DashboardResponse, error)
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
-		WHERE g.is_active = TRUE
+		WHERE g.is_active = TRUE AND c.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT 1
 	`
@@ -139,59 +143,38 @@ func (r *repository) Update(ctx context.Context, payload EditDashboardPayload, m
 		}
 	}
 
-	if media != nil {
-		mediaID, err := utils.InsertMedia(ctx, tx, media)
-		if err != nil {
-			return err
-		}
-
-		query := `
-			UPDATE galleries
-			SET category_id = $2,
-				title = $3,
-				description = $4,
-				media_id = $5,
-				is_active = $6
-			WHERE id = $1
-		`
-		result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description, *mediaID, payload.IsActive)
-		if err != nil {
-			return err
-		}
-
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-
-		if rowsAffected == 0 {
-			return ErrDashboardNotFound
-		}
-	} else {
-		query := `
-			UPDATE galleries
-			SET category_id = $2,
-				title = $3,
-				description = $4,
-				is_active = $5
-			WHERE id = $1
-		`
-		result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description, payload.IsActive)
-		if err != nil {
-			return err
-		}
-
-		rowsAffected, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-
-		if rowsAffected == 0 {
-			return ErrDashboardNotFound
-		}
+	query := `
+		UPDATE galleries
+		SET category_id = $2,
+			title = $3,
+			description = $4,
+			is_active = $5
+		WHERE id = $1
+			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = galleries.category_id AND c.type = 'dashboard')
+			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = $2 AND c.type = 'dashboard')
+	`
+	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description, payload.IsActive)
+	if err != nil {
+		return err
 	}
 
-	return tx.Commit()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return ErrDashboardNotFound
+	}
+	_, oldMedia, err := utils.ReplaceMediaOnEntityColumn(ctx, tx, media, "dashboard", payload.ID, "image", "galleries", "media_id")
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	return utils.RemoveMediaFile(oldMedia)
 }
 
 func (r *repository) Activate(ctx context.Context, payload DashboardPayload) error {
@@ -206,7 +189,13 @@ func (r *repository) Activate(ctx context.Context, payload DashboardPayload) err
 	}
 
 	var exists bool
-	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM galleries WHERE id = $1)`, payload.ID); err != nil {
+	if err := tx.GetContext(ctx, &exists, `
+		SELECT EXISTS (
+			SELECT 1 FROM galleries g
+			JOIN categories c ON c.id = g.category_id
+			WHERE g.id = $1 AND c.type = 'dashboard'
+		)
+	`, payload.ID); err != nil {
 		return err
 	}
 	if !exists {
@@ -229,7 +218,12 @@ func lockDashboardActivation(ctx context.Context, tx *sqlx.Tx) error {
 }
 
 func deactivateOtherDashboards(ctx context.Context, tx *sqlx.Tx, activeID uint) error {
-	_, err := tx.ExecContext(ctx, `UPDATE galleries SET is_active = FALSE WHERE id <> $1 AND is_active = TRUE`, activeID)
+	_, err := tx.ExecContext(ctx, `
+		UPDATE galleries g
+		SET is_active = FALSE
+		WHERE g.id <> $1 AND g.is_active = TRUE
+			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = g.category_id AND c.type = 'dashboard')
+	`, activeID)
 	return err
 }
 
@@ -237,6 +231,7 @@ func (r *repository) Delete(ctx context.Context, payload DashboardPayload) error
 	query := `
 		DELETE FROM galleries
 		WHERE id = $1
+			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = galleries.category_id AND c.type = 'dashboard')
 	`
 
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
@@ -253,5 +248,16 @@ func (r *repository) Delete(ctx context.Context, payload DashboardPayload) error
 		return ErrDashboardNotFound
 	}
 
+	return nil
+}
+
+func ensureDashboardAffected(result sql.Result) error {
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrDashboardNotFound
+	}
 	return nil
 }

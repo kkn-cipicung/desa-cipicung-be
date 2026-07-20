@@ -11,9 +11,13 @@ import (
 	"cipicung.id/be/internal/auth"
 	"cipicung.id/be/internal/business"
 	"cipicung.id/be/internal/category"
+	"cipicung.id/be/internal/contact"
 	"cipicung.id/be/internal/dashboard"
+	"cipicung.id/be/internal/gallery"
+	mapdata "cipicung.id/be/internal/map"
 	"cipicung.id/be/internal/news"
 	"cipicung.id/be/internal/potential"
+	"cipicung.id/be/internal/profile"
 	"cipicung.id/be/utils"
 )
 
@@ -39,6 +43,7 @@ func setupRouter(r *gin.Engine, db *sqlx.DB) {
 		MaxAge:           43200 * time.Second,
 	}
 	r.Use(cors.New(corsConfig))
+	r.Static("/uploads", "./uploads")
 
 	api := r.Group("/api")
 
@@ -56,6 +61,21 @@ func setupRouter(r *gin.Engine, db *sqlx.DB) {
 	dashboardHandler := dashboard.NewHandler(dashboardService)
 	dashboardHandler.RegisterRoutes(api)
 
+	mapRepository := mapdata.NewRepository(db)
+	mapService := mapdata.NewService(mapRepository)
+	mapHandler := mapdata.NewHandler(mapService)
+	mapHandler.RegisterRoutes(api)
+
+	galleryRepository := gallery.NewRepository(db)
+	galleryService := gallery.NewService(galleryRepository)
+	galleryHandler := gallery.NewHandler(galleryService)
+	galleryHandler.RegisterRoutes(api)
+
+	contactRepository := contact.NewRepository(db)
+	contactService := contact.NewService(contactRepository)
+	contactHandler := contact.NewHandler(contactService)
+	contactHandler.RegisterRoutes(api)
+
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)
 	categoryHandler := category.NewHandler(categoryService)
@@ -70,6 +90,11 @@ func setupRouter(r *gin.Engine, db *sqlx.DB) {
 	potentialService := potential.NewService(potentialRepository)
 	potentialHandler := potential.NewHandler(potentialService)
 	potentialHandler.RegisterRoutes(api)
+
+	profileRepository := profile.NewRepository(db)
+	profileService := profile.NewService(profileRepository)
+	profileHandler := profile.NewHandler(profileService)
+	profileHandler.RegisterRoutes(api)
 
 	businessRepository := business.NewRepository(db)
 	businessService := business.NewService(businessRepository)

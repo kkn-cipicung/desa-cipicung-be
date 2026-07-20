@@ -3,6 +3,7 @@ package dashboard
 import (
 	"errors"
 	"io"
+	"log"
 	"net/http"
 
 	"cipicung.id/be/utils"
@@ -87,7 +88,15 @@ func (h *Handler) Update(c *gin.Context) {
 		return
 	}
 
+	userID, ok := utils.UserIDFromContext(c)
+	if !ok {
+		utils.ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	payload.UpdatedBy = userID
+
 	if err := h.service.Update(c.Request.Context(), payload); err != nil {
+		log.Printf("dashboard update failed: id=%d user_id=%d error=%v", payload.ID, userID, err)
 		handleDashboardError(c, err, "Failed to update dashboard")
 		return
 	}

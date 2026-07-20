@@ -42,7 +42,7 @@ func (r *repository) List(ctx context.Context, payload ListCategoryPayload) ([]m
 	query := `
 		SELECT id, name, slug, type, created_at
 		FROM categories
-		WHERE ($3 = '' OR type = $3)
+		WHERE ($3 = '' OR LOWER(TRIM(type)) = $3)
 		ORDER BY id DESC
 		LIMIT $1 OFFSET $2
 	`

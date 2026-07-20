@@ -48,7 +48,11 @@ func (s *service) Create(ctx context.Context, payload AddDashboardPayload) error
 		return err
 	}
 
-	return s.repository.Create(ctx, payload, media)
+	if err := s.repository.Create(ctx, payload, media); err != nil {
+		_ = utils.RemovePreparedMedia(media)
+		return err
+	}
+	return nil
 }
 
 func (s *service) List(ctx context.Context, payload ListDashboardPayload) ([]DashboardOutput, error) {
@@ -99,13 +103,21 @@ func (s *service) Update(ctx context.Context, payload EditDashboardPayload) erro
 	if payload.Description == "" {
 		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
 	}
+	if payload.UpdatedBy == 0 {
+		return fmt.Errorf("%w: updated_by must be greater than 0", utils.ErrInvalidPayload)
+	}
 
-	media, err := utils.PrepareMedia(payload.MediaID, "uploads/dashboard", 0)
+	media, err := utils.PrepareMedia(payload.MediaID, "uploads/dashboard", payload.UpdatedBy)
 	if err != nil {
 		return err
 	}
 
-	return s.repository.Update(ctx, payload, media)
+	if err := s.repository.Update(ctx, payload, media); err != nil {
+		_ = utils.RemovePreparedMedia(media)
+		return err
+	}
+
+	return nil
 }
 
 func (s *service) Activate(ctx context.Context, payload DashboardPayload) error {

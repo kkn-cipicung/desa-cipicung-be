@@ -16,6 +16,7 @@ type Service interface {
 	Update(ctx context.Context, payload EditNewsPayload) error
 	Delete(ctx context.Context, payload NewsPayload) error
 	FindByDate(ctx context.Context, payload NewsByDatePayload) ([]NewsOutput, error)
+	FindHeader(ctx context.Context, payload NewsByIdPayload) (NewsHeaderResponse, error)
 }
 
 type service struct {
@@ -52,7 +53,11 @@ func (s *service) Create(ctx context.Context, payload AddNewsPayload) error {
 		return err
 	}
 
-	return s.repository.Create(ctx, payload, media)
+	if err := s.repository.Create(ctx, payload, media); err != nil {
+		_ = utils.RemovePreparedMedia(media)
+		return err
+	}
+	return nil
 }
 
 func (s *service) List(ctx context.Context, payload ListNewsPayload) ([]NewsOutput, error) {
@@ -83,6 +88,9 @@ func (s *service) Update(ctx context.Context, payload EditNewsPayload) error {
 	if payload.ID == 0 {
 		return fmt.Errorf("%w: news id must be greater than 0", utils.ErrInvalidPayload)
 	}
+	if payload.UploadedBy == 0 {
+		return fmt.Errorf("%w: uploaded_by must be greater than 0", utils.ErrInvalidPayload)
+	}
 	if payload.CategoryID == 0 {
 		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
 	}
@@ -93,12 +101,16 @@ func (s *service) Update(ctx context.Context, payload EditNewsPayload) error {
 		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
 	}
 
-	media, err := utils.PrepareMedia(payload.MediaID, "uploads/news", 0)
+	media, err := utils.PrepareMedia(payload.MediaID, "uploads/news", payload.UploadedBy)
 	if err != nil {
 		return err
 	}
 
-	return s.repository.Update(ctx, payload, media)
+	if err := s.repository.Update(ctx, payload, media); err != nil {
+		_ = utils.RemovePreparedMedia(media)
+		return err
+	}
+	return nil
 }
 
 func (s *service) Delete(ctx context.Context, payload NewsPayload) error {
@@ -121,6 +133,13 @@ func (s *service) FindByDate(ctx context.Context, payload NewsByDatePayload) ([]
 		return nil, err
 	}
 	return mapNewsOutputs(items), nil
+}
+
+func (s *service) FindHeader(ctx context.Context, payload NewsByIdPayload) (NewsHeaderResponse, error) {
+	if payload.ID == 0 {
+		return NewsHeaderResponse{}, fmt.Errorf("%w: news id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	return s.repository.FindHeader(ctx, payload)
 }
 
 func mapNewsOutputs(items []NewsResponse) []NewsOutput {

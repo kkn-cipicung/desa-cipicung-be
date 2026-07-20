@@ -31,9 +31,10 @@ func (s *service) Create(ctx context.Context, payload AddPotentialPayload) error
 	payload.Description = strings.TrimSpace(payload.Description)
 	payload.OwnerName = strings.TrimSpace(payload.OwnerName)
 	payload.OwnerMsisdn = strings.TrimSpace(payload.OwnerMsisdn)
-	if payload.Location != nil {
-		payload.Location.Title = strings.TrimSpace(payload.Location.Title)
-		payload.Location.Description = strings.TrimSpace(payload.Location.Description)
+	payload.LocationID = normalizeOptionalID(payload.LocationID)
+	payload.Location = normalizeLocationInput(payload.Location)
+	if payload.Location != nil && payload.Location.ID != nil {
+		payload.LocationID = nil
 	}
 
 	if payload.UploadedBy == 0 {
@@ -63,7 +64,11 @@ func (s *service) Create(ctx context.Context, payload AddPotentialPayload) error
 		return err
 	}
 
-	return s.repository.Create(ctx, payload, media)
+	if err := s.repository.Create(ctx, payload, media); err != nil {
+		_ = utils.RemovePreparedMedia(media)
+		return err
+	}
+	return nil
 }
 
 func (s *service) List(ctx context.Context, payload ListPotentialPayload) ([]PotentialOutput, error) {
@@ -94,13 +99,17 @@ func (s *service) Update(ctx context.Context, payload EditPotentialPayload) erro
 	payload.Description = strings.TrimSpace(payload.Description)
 	payload.OwnerName = strings.TrimSpace(payload.OwnerName)
 	payload.OwnerMsisdn = strings.TrimSpace(payload.OwnerMsisdn)
-	if payload.Location != nil {
-		payload.Location.Title = strings.TrimSpace(payload.Location.Title)
-		payload.Location.Description = strings.TrimSpace(payload.Location.Description)
+	payload.LocationID = normalizeOptionalID(payload.LocationID)
+	payload.Location = normalizeLocationInput(payload.Location)
+	if payload.Location != nil && payload.Location.ID != nil {
+		payload.LocationID = nil
 	}
 
 	if payload.ID == 0 {
 		return fmt.Errorf("%w: potential id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	if payload.UploadedBy == 0 {
+		return fmt.Errorf("%w: uploaded_by must be greater than 0", utils.ErrInvalidPayload)
 	}
 	if payload.CategoryID == 0 {
 		return fmt.Errorf("%w: category_id must be greater than 0", utils.ErrInvalidPayload)
@@ -121,12 +130,36 @@ func (s *service) Update(ctx context.Context, payload EditPotentialPayload) erro
 		return err
 	}
 
-	media, err := utils.PrepareMedia(payload.MediaID, "uploads/potentials", 0)
+	media, err := utils.PrepareMedia(payload.MediaID, "uploads/potentials", payload.UploadedBy)
 	if err != nil {
 		return err
 	}
 
-	return s.repository.Update(ctx, payload, media)
+	if err := s.repository.Update(ctx, payload, media); err != nil {
+		_ = utils.RemovePreparedMedia(media)
+		return err
+	}
+	return nil
+}
+
+func normalizeOptionalID(id *uint) *uint {
+	if id != nil && *id == 0 {
+		return nil
+	}
+	return id
+}
+
+func normalizeLocationInput(location *PotentialLocationInput) *PotentialLocationInput {
+	if location == nil {
+		return nil
+	}
+	location.ID = normalizeOptionalID(location.ID)
+	location.Title = strings.TrimSpace(location.Title)
+	location.Description = strings.TrimSpace(location.Description)
+	if location.ID == nil && location.Latitude == 0 && location.Longitude == 0 && location.Title == "" && location.Description == "" {
+		return nil
+	}
+	return location
 }
 
 func validateLocation(location *PotentialLocationInput) error {
@@ -163,6 +196,11 @@ func mapPotentialOutput(item PotentialResponse) PotentialOutput {
 		createdAt = utils.FormatTimestamp(*item.CreatedAt)
 	}
 
+	var location *PotentialLocation
+	if item.LocationID != nil {
+		location = &PotentialLocation{ID: *item.LocationID}
+	}
+
 	return PotentialOutput{
 		ID: item.ID,
 		Category: PotentialRef{
@@ -173,9 +211,7 @@ func mapPotentialOutput(item PotentialResponse) PotentialOutput {
 		Subtitle:    item.Subtitle,
 		Slug:        item.Slug,
 		Description: item.Description,
-		Location: PotentialLocation{
-			ID: item.LocationID,
-		},
+		Location:    location,
 		Owner: PotentialOwner{
 			Name:   item.OwnerName,
 			Msisdn: item.OwnerMsisdn,
