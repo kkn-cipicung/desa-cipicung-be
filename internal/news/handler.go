@@ -183,5 +183,5 @@ func handleNewsError(c *gin.Context, err error, message string) {
 		return
 	}
 
-	utils.ErrorResponseJSON(c, http.StatusInternalServerError, message, err)
+	utils.ErrorResponseJSONWithDetail(c, http.StatusInternalServerError, message, err)
 }

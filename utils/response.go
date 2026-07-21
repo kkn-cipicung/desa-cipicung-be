@@ -46,6 +46,18 @@ func ErrorResponseJSON(c *gin.Context, statusCode int, message string, err error
 	})
 }
 
+func ErrorResponseJSONWithDetail(c *gin.Context, statusCode int, message string, err error) {
+	var errStr string
+	if err != nil {
+		errStr = err.Error()
+	}
+	c.JSON(statusCode, ErrorResponse{
+		Code:    statusCode,
+		Message: message,
+		Error:   errStr,
+	})
+}
+
 func AuthErrorResponse(c *gin.Context, err error, message string) {
 	switch {
 	case errors.Is(err, ErrInvalidAuthPayload):

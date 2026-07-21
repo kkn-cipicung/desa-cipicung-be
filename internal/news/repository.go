@@ -57,7 +57,10 @@ func (r *repository) List(ctx context.Context, payload ListNewsPayload) ([]NewsR
 	var results []NewsResponse
 
 	query := `
-		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.media_id, d.created_at
+		SELECT d.id, COALESCE(d.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(d.uploaded_by, 0) AS uploaded_by, COALESCE(u.name, '') AS uploader_name,
+			COALESCE(d.title, '') AS title, COALESCE(d.description, '') AS description,
+			d.media_id, COALESCE(d.created_at, NOW()) AS created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
@@ -76,7 +79,10 @@ func (r *repository) FindByID(ctx context.Context, payload NewsByIdPayload) (*Ne
 	var result NewsResponse
 
 	query := `
-		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.media_id, d.created_at
+		SELECT d.id, COALESCE(d.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(d.uploaded_by, 0) AS uploaded_by, COALESCE(u.name, '') AS uploader_name,
+			COALESCE(d.title, '') AS title, COALESCE(d.description, '') AS description,
+			d.media_id, COALESCE(d.created_at, NOW()) AS created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
@@ -158,7 +164,10 @@ func (r *repository) FindByDate(ctx context.Context, payload NewsByDatePayload) 
 	var results []NewsResponse
 
 	query := `
-		SELECT d.id, d.category_id, COALESCE(c.name, '') AS category_name, d.uploaded_by, COALESCE(u.name, '') AS uploader_name, d.title, d.description, d.media_id, d.created_at
+		SELECT d.id, COALESCE(d.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(d.uploaded_by, 0) AS uploaded_by, COALESCE(u.name, '') AS uploader_name,
+			COALESCE(d.title, '') AS title, COALESCE(d.description, '') AS description,
+			d.media_id, COALESCE(d.created_at, NOW()) AS created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id

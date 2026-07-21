@@ -60,7 +60,7 @@ func (r *repository) Create(ctx context.Context, payload AddGalleryPayload, medi
 func (r *repository) List(ctx context.Context, payload ListGalleryPayload) ([]GalleryResponse, error) {
 	var results []GalleryResponse
 	query := `
-		SELECT g.id, g.title, COALESCE(m.file_path, '') AS image
+		SELECT g.id, COALESCE(g.title, '') AS title, COALESCE(m.file_path, '') AS image
 		FROM galleries g
 		JOIN categories c ON g.category_id = c.id AND c.type = 'gallery'
 		LEFT JOIN media m ON g.media_id = m.id
@@ -76,8 +76,9 @@ func (r *repository) List(ctx context.Context, payload ListGalleryPayload) ([]Ga
 func (r *repository) FindByID(ctx context.Context, payload GalleryPayload) (*GalleryResponse, error) {
 	var result GalleryResponse
 	query := `
-		SELECT g.id, g.category_id, COALESCE(c.name, '') AS category_name, g.title,
-			g.description, COALESCE(m.file_path, '') AS image
+		SELECT g.id, COALESCE(g.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(g.title, '') AS title, COALESCE(g.description, '') AS description,
+			COALESCE(m.file_path, '') AS image
 		FROM galleries g
 		LEFT JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
