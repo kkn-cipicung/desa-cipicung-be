@@ -50,7 +50,7 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 		VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9,
 			$10, $11, $12, $13, $14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23, $24,
+			$19, $20, $21, $22, $23, ($17 + $18)::TEXT,
 			CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 		)
 		RETURNING id
@@ -61,7 +61,7 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 		payload.Address, payload.Phone, payload.Email, payload.Website, payload.Latitude,
 		payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History, payload.Description,
 		payload.Region, payload.HamletOne, payload.HamletTwo, payload.NorthBorder,
-		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area, payload.Population,
+		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area,
 	).Scan(&villageID); err != nil {
 		return err
 	}
@@ -122,8 +122,8 @@ func (r *repository) FindByID(ctx context.Context, payload ProfilePayload) (*Pro
 func (r *repository) FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error) {
 	var result ProfileRegionBoundaryResponse
 	query := `
-		SELECT COALESCE(region, '') AS region, COALESCE(hamlet_one, '') AS hamlet_one,
-			COALESCE(hamlet_two, '') AS hamlet_two, COALESCE(north_border, '') AS north_border,
+		SELECT COALESCE(region, '') AS region, COALESCE(hamlet_one, 0) AS hamlet_one,
+			COALESCE(hamlet_two, 0) AS hamlet_two, COALESCE(north_border, '') AS north_border,
 			COALESCE(east_border, '') AS east_border, COALESCE(south_border, '') AS south_border,
 			COALESCE(west_border, '') AS west_border, COALESCE(area, '') AS area,
 			COALESCE(population, '') AS population
@@ -225,7 +225,7 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 			south_border = $22,
 			west_border = $23,
 			area = $24,
-			population = $25,
+			population = ($18 + $19)::TEXT,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
@@ -234,7 +234,7 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 		payload.PostalCode, payload.Address, payload.Phone, payload.Email, payload.Website,
 		payload.Latitude, payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History,
 		payload.Description, payload.Region, payload.HamletOne, payload.HamletTwo, payload.NorthBorder,
-		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area, payload.Population,
+		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area,
 	)
 	if err != nil {
 		return err
@@ -311,8 +311,8 @@ func profileSelectQuery() string {
 			COALESCE(v.longitude, 0) AS longitude, COALESCE(v.vision, '') AS vision,
 			COALESCE(v.mission, ARRAY[]::varchar[]) AS mission,
 			COALESCE(v.history, '') AS history, COALESCE(v.description, '') AS description,
-			COALESCE(v.region, '') AS region, COALESCE(v.hamlet_one, '') AS hamlet_one,
-			COALESCE(v.hamlet_two, '') AS hamlet_two, COALESCE(v.north_border, '') AS north_border,
+			COALESCE(v.region, '') AS region, COALESCE(v.hamlet_one, 0) AS hamlet_one,
+			COALESCE(v.hamlet_two, 0) AS hamlet_two, COALESCE(v.north_border, '') AS north_border,
 			COALESCE(v.east_border, '') AS east_border, COALESCE(v.south_border, '') AS south_border,
 			COALESCE(v.west_border, '') AS west_border, COALESCE(v.area, '') AS area,
 			COALESCE(v.population, '') AS population,

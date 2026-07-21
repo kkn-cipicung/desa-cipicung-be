@@ -50,12 +50,12 @@ func (s *service) Create(ctx context.Context, payload AddNewsPayload) error {
 
 	media, err := utils.PrepareMedia(payload.MediaID, "uploads/news", payload.UploadedBy)
 	if err != nil {
-		return err
+		return fmt.Errorf("prepare news media: %w", err)
 	}
 
 	if err := s.repository.Create(ctx, payload, media); err != nil {
 		_ = utils.RemovePreparedMedia(media)
-		return err
+		return fmt.Errorf("create news: %w", err)
 	}
 	return nil
 }

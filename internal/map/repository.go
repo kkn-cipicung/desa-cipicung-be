@@ -32,7 +32,7 @@ func NewRepository(db *sqlx.DB) Repository {
 func (r *repository) Create(ctx context.Context, payload AddMapPayload) error {
 	query := `
 		INSERT INTO villages (name, elevation, coordinate, hamlet_one, hamlet_two, population, created_at, updated_at)
-		VALUES ('Map', $1, $2, $3, $4, ($3::BIGINT + $4::BIGINT)::TEXT, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES ('Map', $1, $2, $3, $4, ($3 + $4)::TEXT, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err := r.db.ExecContext(ctx, query, payload.Elevation, payload.Coordinate, *payload.HamletOne, *payload.HamletTwo)
 	return err
@@ -82,7 +82,7 @@ func (r *repository) Update(ctx context.Context, payload EditMapPayload) error {
 			coordinate = $3,
 			hamlet_one = $4,
 			hamlet_two = $5,
-			population = ($4::BIGINT + $5::BIGINT)::TEXT,
+			population = ($4 + $5)::TEXT,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
@@ -158,8 +158,8 @@ func mapSelectQuery() string {
 	return `
 		SELECT COALESCE(elevation, '') AS elevation,
 			COALESCE(coordinate, '') AS coordinate,
-			CAST(COALESCE(NULLIF(hamlet_one, ''), '0') AS BIGINT) AS hamlet_one,
-			CAST(COALESCE(NULLIF(hamlet_two, ''), '0') AS BIGINT) AS hamlet_two
+			COALESCE(hamlet_one, 0) AS hamlet_one,
+			COALESCE(hamlet_two, 0) AS hamlet_two
 		FROM villages
 	`
 }

@@ -2,11 +2,13 @@ package news
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
 	"cipicung.id/be/utils"
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 )
 
 type Handler struct {
@@ -183,5 +185,28 @@ func handleNewsError(c *gin.Context, err error, message string) {
 		return
 	}
 
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code {
+		case "23503":
+			utils.ErrorResponseJSON(c, http.StatusBadRequest, "Referenced data does not exist", databaseErrorDetail(err, pqErr))
+			return
+		case "23502", "22001", "22P02":
+			utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid news data", databaseErrorDetail(err, pqErr))
+			return
+		case "23505":
+			utils.ErrorResponseJSON(c, http.StatusConflict, "News data already exists", databaseErrorDetail(err, pqErr))
+			return
+		}
+	}
+
 	utils.ErrorResponseJSONWithDetail(c, http.StatusInternalServerError, message, err)
+}
+
+func databaseErrorDetail(err error, pqErr *pq.Error) error {
+	detail := pqErr.Detail
+	if detail == "" {
+		detail = pqErr.Message
+	}
+	return fmt.Errorf("%v: %s", err, detail)
 }

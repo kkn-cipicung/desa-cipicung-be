@@ -24,8 +24,8 @@ type AddProfilePayload struct {
 	History           string                    `db:"history" json:"history"`
 	Description       string                    `db:"description" json:"description"`
 	Region            string                    `db:"region" json:"region"`
-	HamletOne         string                    `db:"hamlet_one" json:"hamlet_one"`
-	HamletTwo         string                    `db:"hamlet_two" json:"hamlet_two"`
+	HamletOne         int64                     `db:"hamlet_one" json:"hamlet_one"`
+	HamletTwo         int64                     `db:"hamlet_two" json:"hamlet_two"`
 	NorthBorder       string                    `db:"north_border" json:"north_border"`
 	EastBorder        string                    `db:"east_border" json:"east_border"`
 	SouthBorder       string                    `db:"south_border" json:"south_border"`
@@ -64,8 +64,8 @@ type ProfileResponse struct {
 	History            string         `db:"history" json:"history"`
 	Description        string         `db:"description" json:"description"`
 	Region             string         `db:"region" json:"region"`
-	HamletOne          string         `db:"hamlet_one" json:"hamlet_one"`
-	HamletTwo          string         `db:"hamlet_two" json:"hamlet_two"`
+	HamletOne          int64          `db:"hamlet_one" json:"hamlet_one"`
+	HamletTwo          int64          `db:"hamlet_two" json:"hamlet_two"`
 	NorthBorder        string         `db:"north_border" json:"north_border"`
 	EastBorder         string         `db:"east_border" json:"east_border"`
 	SouthBorder        string         `db:"south_border" json:"south_border"`
@@ -104,8 +104,8 @@ type ProfileOutput struct {
 	History     string                  `json:"history"`
 	Description string                  `json:"description"`
 	Region      string                  `json:"region"`
-	HamletOne   string                  `json:"hamlet_one"`
-	HamletTwo   string                  `json:"hamlet_two"`
+	HamletOne   int64                   `json:"hamlet_one"`
+	HamletTwo   int64                   `json:"hamlet_two"`
 	NorthBorder string                  `json:"north_border"`
 	EastBorder  string                  `json:"east_border"`
 	SouthBorder string                  `json:"south_border"`
@@ -145,8 +145,8 @@ type ProfileOfficialOutput struct {
 
 type ProfileRegionBoundaryResponse struct {
 	Region      string `db:"region" json:"region"`
-	HamletOne   string `db:"hamlet_one" json:"hamlet_one"`
-	HamletTwo   string `db:"hamlet_two" json:"hamlet_two"`
+	HamletOne   int64  `db:"hamlet_one" json:"hamlet_one"`
+	HamletTwo   int64  `db:"hamlet_two" json:"hamlet_two"`
 	NorthBorder string `db:"north_border" json:"north_border"`
 	EastBorder  string `db:"east_border" json:"east_border"`
 	SouthBorder string `db:"south_border" json:"south_border"`

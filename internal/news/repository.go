@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"cipicung.id/be/utils"
 	"github.com/jmoiron/sqlx"
@@ -32,7 +33,7 @@ func NewRepository(db *sqlx.DB) Repository {
 func (r *repository) Create(ctx context.Context, payload AddNewsPayload, media *utils.MediaPayload) error {
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("begin database transaction: %w", err)
 	}
 	defer tx.Rollback()
 
@@ -43,14 +44,17 @@ func (r *repository) Create(ctx context.Context, payload AddNewsPayload, media *
 	`
 	var documentID uint
 	if err := tx.QueryRowContext(ctx, documentQuery, payload.CategoryID, payload.UploadedBy, payload.Title, payload.Description).Scan(&documentID); err != nil {
-		return err
+		return fmt.Errorf("insert document: %w", err)
 	}
 
 	if _, err := utils.AttachMediaToEntityColumn(ctx, tx, media, "news", documentID, "image", "documents", "media_id"); err != nil {
-		return err
+		return fmt.Errorf("attach news media: %w", err)
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit database transaction: %w", err)
+	}
+	return nil
 }
 
 func (r *repository) List(ctx context.Context, payload ListNewsPayload) ([]NewsResponse, error) {

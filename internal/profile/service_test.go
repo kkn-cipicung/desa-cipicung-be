@@ -2,6 +2,36 @@ package profile
 
 import "testing"
 
+func TestNormalizeProfilePayloadCalculatesPopulationFromHamlets(t *testing.T) {
+	payload := AddProfilePayload{
+		HamletOne:  2500,
+		HamletTwo:  1750,
+		Population: "999999",
+	}
+
+	normalizeProfilePayload(&payload)
+
+	if payload.Population != "4250" {
+		t.Fatalf("population = %q, want %q", payload.Population, "4250")
+	}
+}
+
+func TestValidateProfilePayloadRejectsNegativeHamlets(t *testing.T) {
+	payload := AddProfilePayload{
+		Name:      "Desa Cipicung",
+		Province:  "Jawa Barat",
+		Regency:   "Subang",
+		District:  "Cipicung",
+		Address:   "Jl. Desa",
+		HamletOne: -1,
+		HamletTwo: 1,
+	}
+
+	if err := validateProfilePayload(payload); err == nil {
+		t.Fatal("expected negative hamlet validation error")
+	}
+}
+
 func TestValidateHeadmanPeriods(t *testing.T) {
 	finish2023 := "2023-12-31"
 	finish2024 := "2024-06-30"

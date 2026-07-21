@@ -23,8 +23,8 @@ type Village struct {
 	History     string         `db:"history" json:"history"`
 	Description string         `db:"description" json:"description"`
 	Region      string         `db:"region" json:"region"`
-	HamletOne   string         `db:"hamlet_one" json:"hamlet_one"`
-	HamletTwo   string         `db:"hamlet_two" json:"hamlet_two"`
+	HamletOne   int64          `db:"hamlet_one" json:"hamlet_one"`
+	HamletTwo   int64          `db:"hamlet_two" json:"hamlet_two"`
 	NorthBorder string         `db:"north_border" json:"north_border"`
 	EastBorder  string         `db:"east_border" json:"east_border"`
 	SouthBorder string         `db:"south_border" json:"south_border"`

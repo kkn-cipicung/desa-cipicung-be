@@ -3,6 +3,7 @@ package profile
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -102,14 +103,12 @@ func normalizeProfilePayload(payload *AddProfilePayload) {
 	payload.History = strings.TrimSpace(payload.History)
 	payload.Description = strings.TrimSpace(payload.Description)
 	payload.Region = strings.TrimSpace(payload.Region)
-	payload.HamletOne = strings.TrimSpace(payload.HamletOne)
-	payload.HamletTwo = strings.TrimSpace(payload.HamletTwo)
 	payload.NorthBorder = strings.TrimSpace(payload.NorthBorder)
 	payload.EastBorder = strings.TrimSpace(payload.EastBorder)
 	payload.SouthBorder = strings.TrimSpace(payload.SouthBorder)
 	payload.WestBorder = strings.TrimSpace(payload.WestBorder)
 	payload.Area = strings.TrimSpace(payload.Area)
-	payload.Population = strings.TrimSpace(payload.Population)
+	payload.Population = calculateProfilePopulation(payload.HamletOne, payload.HamletTwo)
 	if payload.Headman != nil {
 		normalizeHeadmanPayload(payload.Headman)
 	}
@@ -142,6 +141,12 @@ func validateProfilePayload(payload AddProfilePayload) error {
 	if payload.Address == "" {
 		return fmt.Errorf("%w: address is required", utils.ErrInvalidPayload)
 	}
+	if payload.HamletOne < 0 {
+		return fmt.Errorf("%w: hamlet_one cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.HamletTwo < 0 {
+		return fmt.Errorf("%w: hamlet_two cannot be negative", utils.ErrInvalidPayload)
+	}
 	if payload.Headman != nil {
 		if err := validateHeadmanPayload(*payload.Headman); err != nil {
 			return err
@@ -170,6 +175,10 @@ func validateProfilePayload(payload AddProfilePayload) error {
 		return fmt.Errorf("%w: resource_potential title and detail are required", utils.ErrInvalidPayload)
 	}
 	return nil
+}
+
+func calculateProfilePopulation(hamletOne, hamletTwo int64) string {
+	return strconv.FormatInt(hamletOne+hamletTwo, 10)
 }
 
 func normalizeGovernmentOfficial(payload *GovernmentOfficialInput) {
