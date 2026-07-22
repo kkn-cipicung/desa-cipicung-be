@@ -2,28 +2,24 @@ package mapdata
 
 import "testing"
 
-func TestValidateMapPayloadHamlets(t *testing.T) {
-	zero := int64(0)
-	positive := int64(2500)
-	negative := int64(-1)
-
+func TestValidateMapPayload(t *testing.T) {
 	tests := []struct {
 		name    string
 		payload AddMapPayload
 		wantErr bool
 	}{
 		{
-			name:    "valid hamlet populations",
-			payload: AddMapPayload{Elevation: "120 mdpl", Coordinate: "-6.5,107.4", HamletOne: &positive, HamletTwo: &zero},
+			name:    "valid map payload",
+			payload: AddMapPayload{Elevation: "120 mdpl", Coordinate: "-6.5,107.4"},
 		},
 		{
-			name:    "missing hamlet one",
-			payload: AddMapPayload{Elevation: "120 mdpl", Coordinate: "-6.5,107.4", HamletTwo: &positive},
+			name:    "missing elevation",
+			payload: AddMapPayload{Coordinate: "-6.5,107.4"},
 			wantErr: true,
 		},
 		{
-			name:    "negative hamlet population",
-			payload: AddMapPayload{Elevation: "120 mdpl", Coordinate: "-6.5,107.4", HamletOne: &negative, HamletTwo: &positive},
+			name:    "missing coordinate",
+			payload: AddMapPayload{Elevation: "120 mdpl"},
 			wantErr: true,
 		},
 	}

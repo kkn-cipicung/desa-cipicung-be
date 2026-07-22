@@ -101,18 +101,6 @@ func validateMapPayload(payload AddMapPayload) error {
 	if payload.Coordinate == "" {
 		return fmt.Errorf("%w: coordinate is required", utils.ErrInvalidPayload)
 	}
-	if payload.HamletOne == nil {
-		return fmt.Errorf("%w: hamlet_one is required", utils.ErrInvalidPayload)
-	}
-	if *payload.HamletOne < 0 {
-		return fmt.Errorf("%w: hamlet_one cannot be negative", utils.ErrInvalidPayload)
-	}
-	if payload.HamletTwo == nil {
-		return fmt.Errorf("%w: hamlet_two is required", utils.ErrInvalidPayload)
-	}
-	if *payload.HamletTwo < 0 {
-		return fmt.Errorf("%w: hamlet_two cannot be negative", utils.ErrInvalidPayload)
-	}
 	return nil
 }
 

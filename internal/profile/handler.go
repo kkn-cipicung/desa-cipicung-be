@@ -24,30 +24,15 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	if err := h.service.Create(c.Request.Context(), payload); err != nil {
-		handleProfileError(c, err, "Failed to create profile")
+		handleProfileError(c, err, "Failed to save profile")
 		return
 	}
 
-	if payload.ID != 0 {
-		utils.SuccessResponse(c, http.StatusOK, "Profile updated successfully", nil)
-		return
-	}
-	utils.SuccessResponse(c, http.StatusCreated, "Profile created successfully", nil)
+	utils.SuccessResponse(c, http.StatusOK, "Profile saved successfully", nil)
 }
 
-func (h *Handler) FindByID(c *gin.Context) {
-	var payload ProfilePayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
-		return
-	}
-
-	if payload.ID == 0 {
-		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid profile ID", nil)
-		return
-	}
-
-	profile, err := h.service.FindByID(c.Request.Context(), payload)
+func (h *Handler) Detail(c *gin.Context) {
+	profile, err := h.service.Detail(c.Request.Context())
 	if err != nil {
 		handleProfileError(c, err, "Failed to get profile")
 		return

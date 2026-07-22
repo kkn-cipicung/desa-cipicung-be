@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -32,13 +31,26 @@ func NewRepository(db *sqlx.DB) Repository {
 }
 
 func (r *repository) Create(ctx context.Context, payload AddMapPayload) error {
+	var firstID uint
+	err := r.db.GetContext(ctx, &firstID, `SELECT id FROM villages ORDER BY id ASC LIMIT 1`)
+	if err == nil && firstID > 0 {
+		query := `
+			UPDATE villages
+			SET elevation = $2,
+				coordinate = $3,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE id = $1
+		`
+		_, updateErr := r.db.ExecContext(ctx, query, firstID, payload.Elevation, payload.Coordinate)
+		return updateErr
+	}
+
 	query := `
-		INSERT INTO villages (name, elevation, coordinate, hamlet_one, hamlet_two, population, created_at, updated_at)
-		VALUES ('Map', $1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO villages (name, elevation, coordinate, created_at, updated_at)
+		VALUES ('Map', $1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
-	population := fmt.Sprintf("%d", *payload.HamletOne+*payload.HamletTwo)
-	_, err := r.db.ExecContext(ctx, query, payload.Elevation, payload.Coordinate, *payload.HamletOne, *payload.HamletTwo, population)
-	return err
+	_, createErr := r.db.ExecContext(ctx, query, payload.Elevation, payload.Coordinate)
+	return createErr
 }
 
 func (r *repository) Detail(ctx context.Context) (*MapResponse, error) {
@@ -88,15 +100,11 @@ func (r *repository) Update(ctx context.Context, payload EditMapPayload) error {
 		UPDATE villages
 		SET elevation = $2,
 			coordinate = $3,
-			hamlet_one = $4,
-			hamlet_two = $5,
-			population = $6,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
-	population := fmt.Sprintf("%d", *payload.HamletOne+*payload.HamletTwo)
 	result, err := tx.ExecContext(ctx, query,
-		payload.ID, payload.Elevation, payload.Coordinate, *payload.HamletOne, *payload.HamletTwo, population,
+		payload.ID, payload.Elevation, payload.Coordinate,
 	)
 	if err != nil {
 		return err

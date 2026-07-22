@@ -12,7 +12,7 @@ import (
 
 type Service interface {
 	Create(ctx context.Context, payload AddProfilePayload) error
-	FindByID(ctx context.Context, payload ProfilePayload) (*ProfileOutput, error)
+	Detail(ctx context.Context) (*ProfileOutput, error)
 	FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error)
 	FindVisionMission(ctx context.Context) (*ProfileVisionMissionOutput, error)
 	FindGovernmentStructure(ctx context.Context) ([]GovernmentStructureResponse, error)
@@ -33,26 +33,29 @@ func (s *service) Create(ctx context.Context, payload AddProfilePayload) error {
 	if err := validateProfilePayload(payload); err != nil {
 		return err
 	}
+	first, err := s.repository.FindFirst(ctx)
+	if err == nil && first != nil && first.ID != 0 {
+		payload.ID = first.ID
+		return s.repository.Update(ctx, EditProfilePayload{AddProfilePayload: payload})
+	}
 	if payload.ID != 0 {
 		return s.repository.Update(ctx, EditProfilePayload{AddProfilePayload: payload})
 	}
 	return s.repository.Create(ctx, payload)
 }
 
-func (s *service) FindByID(ctx context.Context, payload ProfilePayload) (*ProfileOutput, error) {
-	if payload.ID == 0 {
-		return nil, fmt.Errorf("%w: profile id must be greater than 0", utils.ErrInvalidPayload)
-	}
-	item, err := s.repository.FindByID(ctx, payload)
+func (s *service) Detail(ctx context.Context) (*ProfileOutput, error) {
+	item, err := s.repository.Detail(ctx)
 	if err != nil {
 		return nil, err
 	}
 	output := mapProfileOutput(*item)
-	headmen, err := s.repository.FindHeadmen(ctx, payload.ID)
-	if err != nil {
-		return nil, err
+	if item.ID != 0 {
+		headmen, err := s.repository.FindHeadmen(ctx, item.ID)
+		if err == nil {
+			output.Headmen = headmen
+		}
 	}
-	output.Headmen = headmen
 	return &output, nil
 }
 

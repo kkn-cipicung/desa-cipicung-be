@@ -43,7 +43,7 @@ type EditProfilePayload struct {
 }
 
 type ProfilePayload struct {
-	ID uint `db:"id" json:"id" binding:"required"`
+	ID uint `db:"id" json:"id"`
 }
 
 type ProfileResponse struct {

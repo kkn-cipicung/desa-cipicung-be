@@ -15,7 +15,8 @@ const headmanPosition = "kepala-desa"
 
 type Repository interface {
 	Create(ctx context.Context, payload AddProfilePayload) error
-	FindByID(ctx context.Context, payload ProfilePayload) (*ProfileResponse, error)
+	Detail(ctx context.Context) (*ProfileResponse, error)
+	FindFirst(ctx context.Context) (*ProfileResponse, error)
 	FindHeadmen(ctx context.Context, villageID uint) ([]ProfileOfficialOutput, error)
 	FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error)
 	FindVisionMission(ctx context.Context) (*ProfileVisionMissionResponse, error)
@@ -50,7 +51,7 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 		VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9,
 			$10, $11, $12, $13, $14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23, ($17 + $18)::TEXT,
+			$19, $20, $21, $22, $23, $24,
 			CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 		)
 		RETURNING id
@@ -61,7 +62,7 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 		payload.Address, payload.Phone, payload.Email, payload.Website, payload.Latitude,
 		payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History, payload.Description,
 		payload.Region, payload.HamletOne, payload.HamletTwo, payload.NorthBorder,
-		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area,
+		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area, payload.Population,
 	).Scan(&villageID); err != nil {
 		return err
 	}
@@ -105,19 +106,24 @@ func (r *repository) FindHeadmen(ctx context.Context, villageID uint) ([]Profile
 	return results, nil
 }
 
-func (r *repository) FindByID(ctx context.Context, payload ProfilePayload) (*ProfileResponse, error) {
+func (r *repository) Detail(ctx context.Context) (*ProfileResponse, error) {
 	var result ProfileResponse
-	query := profileSelectQuery() + `
-		WHERE v.id = $1
-	`
-	if err := r.db.GetContext(ctx, &result, query, payload.ID, headmanPosition); err != nil {
+	query := profileSelectQuery() + ` ORDER BY v.id ASC LIMIT 1 `
+	if err := r.db.GetContext(ctx, &result, query, headmanPosition); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			var fallbackResult ProfileResponse
-			fallbackQuery := profileSelectQuery() + ` ORDER BY v.id ASC LIMIT 1 `
-			if fallbackErr := r.db.GetContext(ctx, &fallbackResult, fallbackQuery, headmanPosition); fallbackErr == nil {
-				return &fallbackResult, nil
-			}
 			return &ProfileResponse{Mission: []string{}}, nil
+		}
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (r *repository) FindFirst(ctx context.Context) (*ProfileResponse, error) {
+	var result ProfileResponse
+	query := profileSelectQuery() + ` ORDER BY v.id ASC LIMIT 1 `
+	if err := r.db.GetContext(ctx, &result, query, headmanPosition); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrProfileNotFound
 		}
 		return nil, err
 	}
@@ -233,7 +239,7 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 			south_border = $22,
 			west_border = $23,
 			area = $24,
-			population = ($18 + $19)::TEXT,
+			population = $25,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
@@ -242,7 +248,7 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 		payload.PostalCode, payload.Address, payload.Phone, payload.Email, payload.Website,
 		payload.Latitude, payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History,
 		payload.Description, payload.Region, payload.HamletOne, payload.HamletTwo, payload.NorthBorder,
-		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area,
+		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area, payload.Population,
 	)
 	if err != nil {
 		return err
@@ -337,7 +343,7 @@ func profileSelectQuery() string {
 		FROM villages v
 		LEFT JOIN LATERAL (
 			SELECT * FROM officials
-			WHERE village_id = v.id AND position = $2
+			WHERE village_id = v.id AND position = $1
 			ORDER BY is_active DESC, finish_date DESC NULLS FIRST, start_date DESC NULLS LAST, id DESC
 			LIMIT 1
 		) o ON TRUE
