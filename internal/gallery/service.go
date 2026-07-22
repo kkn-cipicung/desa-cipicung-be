@@ -59,6 +59,7 @@ func (s *service) List(ctx context.Context, payload ListGalleryPayload) ([]Galle
 			ID:    item.ID,
 			Title: item.Title,
 			Image: item.Image,
+			Media: item.Image,
 		})
 	}
 	return outputs, nil
@@ -76,6 +77,7 @@ func (s *service) FindByID(ctx context.Context, payload GalleryPayload) (*Galler
 	output := GalleryDetailOutput{
 		Title:       item.Title,
 		Image:       item.Image,
+		Media:       item.Image,
 		Description: item.Description,
 		Category: []GalleryRef{
 			{

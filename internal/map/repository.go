@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -16,6 +17,7 @@ type Repository interface {
 	Create(ctx context.Context, payload AddMapPayload) error
 	Detail(ctx context.Context) (*MapResponse, error)
 	FindActive(ctx context.Context) (*MapResponse, error)
+	FindList(ctx context.Context) ([]MapResponse, error)
 	Update(ctx context.Context, payload EditMapPayload) error
 	Activate(ctx context.Context, payload MapPayload) error
 	Delete(ctx context.Context, payload MapPayload) error
@@ -32,9 +34,10 @@ func NewRepository(db *sqlx.DB) Repository {
 func (r *repository) Create(ctx context.Context, payload AddMapPayload) error {
 	query := `
 		INSERT INTO villages (name, elevation, coordinate, hamlet_one, hamlet_two, population, created_at, updated_at)
-		VALUES ('Map', $1, $2, $3, $4, ($3 + $4)::TEXT, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES ('Map', $1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
-	_, err := r.db.ExecContext(ctx, query, payload.Elevation, payload.Coordinate, *payload.HamletOne, *payload.HamletTwo)
+	population := fmt.Sprintf("%d", *payload.HamletOne+*payload.HamletTwo)
+	_, err := r.db.ExecContext(ctx, query, payload.Elevation, payload.Coordinate, *payload.HamletOne, *payload.HamletTwo, population)
 	return err
 }
 
@@ -46,7 +49,7 @@ func (r *repository) Detail(ctx context.Context) (*MapResponse, error) {
 	`
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrMapNotFound
+			return &MapResponse{}, nil
 		}
 		return nil, err
 	}
@@ -62,7 +65,12 @@ func (r *repository) FindActive(ctx context.Context) (*MapResponse, error) {
 	`
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrMapNotFound
+			var fallbackResult MapResponse
+			fallbackQuery := mapSelectQuery() + ` ORDER BY id DESC LIMIT 1 `
+			if fallbackErr := r.db.GetContext(ctx, &fallbackResult, fallbackQuery); fallbackErr == nil {
+				return &fallbackResult, nil
+			}
+			return &MapResponse{}, nil
 		}
 		return nil, err
 	}
@@ -82,12 +90,13 @@ func (r *repository) Update(ctx context.Context, payload EditMapPayload) error {
 			coordinate = $3,
 			hamlet_one = $4,
 			hamlet_two = $5,
-			population = ($4 + $5)::TEXT,
+			population = $6,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
+	population := fmt.Sprintf("%d", *payload.HamletOne+*payload.HamletTwo)
 	result, err := tx.ExecContext(ctx, query,
-		payload.ID, payload.Elevation, payload.Coordinate, *payload.HamletOne, *payload.HamletTwo,
+		payload.ID, payload.Elevation, payload.Coordinate, *payload.HamletOne, *payload.HamletTwo, population,
 	)
 	if err != nil {
 		return err
@@ -154,12 +163,25 @@ func (r *repository) Delete(ctx context.Context, payload MapPayload) error {
 	return nil
 }
 
+func (r *repository) FindList(ctx context.Context) ([]MapResponse, error) {
+	var result []MapResponse
+	query := mapSelectQuery() + `
+		ORDER BY id DESC
+	`
+	if err := r.db.SelectContext(ctx, &result, query); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func mapSelectQuery() string {
 	return `
-		SELECT COALESCE(elevation, '') AS elevation,
+		SELECT id,
+			COALESCE(elevation, '') AS elevation,
 			COALESCE(coordinate, '') AS coordinate,
 			COALESCE(hamlet_one, 0) AS hamlet_one,
-			COALESCE(hamlet_two, 0) AS hamlet_two
+			COALESCE(hamlet_two, 0) AS hamlet_two,
+			COALESCE(is_active, FALSE) AS is_active
 		FROM villages
 	`
 }

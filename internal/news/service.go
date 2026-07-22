@@ -163,7 +163,7 @@ func mapNewsOutput(item NewsResponse) NewsOutput {
 		},
 		Title:       item.Title,
 		Description: item.Description,
-		MediaID:     item.MediaID,
+		Media:       item.Media,
 		CreatedAt:   utils.FormatTimestamp(item.CreatedAt),
 	}
 }

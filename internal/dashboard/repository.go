@@ -65,10 +65,11 @@ func (r *repository) List(ctx context.Context, payload ListDashboardPayload) ([]
 	var results []DashboardResponse
 
 	query := `
-		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, g.media_id, g.is_active, g.created_at
+		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, COALESCE(m.file_path, '') AS media, g.is_active, g.created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
+		LEFT JOIN media m ON g.media_id = m.id
 		WHERE c.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT $1 OFFSET $2
@@ -85,10 +86,11 @@ func (r *repository) Detail(ctx context.Context) (*DashboardResponse, error) {
 	var result DashboardResponse
 
 	query := `
-		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, g.media_id, g.is_active, g.created_at
+		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, COALESCE(m.file_path, '') AS media, g.is_active, g.created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
+		LEFT JOIN media m ON g.media_id = m.id
 		WHERE c.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT 1
@@ -96,7 +98,7 @@ func (r *repository) Detail(ctx context.Context) (*DashboardResponse, error) {
 
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrDashboardNotFound
+			return &DashboardResponse{}, nil
 		}
 		return nil, err
 	}
@@ -108,10 +110,11 @@ func (r *repository) FindActive(ctx context.Context) (*DashboardResponse, error)
 	var result DashboardResponse
 
 	query := `
-		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, g.media_id, g.is_active, g.created_at
+		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, COALESCE(m.file_path, '') AS media, g.is_active, g.created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
+		LEFT JOIN media m ON g.media_id = m.id
 		WHERE g.is_active = TRUE AND c.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT 1
@@ -119,7 +122,21 @@ func (r *repository) FindActive(ctx context.Context) (*DashboardResponse, error)
 
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrDashboardNotFound
+			var fallbackResult DashboardResponse
+			fallbackQuery := `
+				SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, COALESCE(m.file_path, '') AS media, g.is_active, g.created_at
+				FROM galleries g
+				LEFT JOIN users u ON g.created_by = u.id
+				LEFT JOIN categories c ON g.category_id = c.id
+				LEFT JOIN media m ON g.media_id = m.id
+				WHERE c.type = 'dashboard'
+				ORDER BY g.id DESC
+				LIMIT 1
+			`
+			if fallbackErr := r.db.GetContext(ctx, &fallbackResult, fallbackQuery); fallbackErr == nil {
+				return &fallbackResult, nil
+			}
+			return &DashboardResponse{}, nil
 		}
 		return nil, err
 	}

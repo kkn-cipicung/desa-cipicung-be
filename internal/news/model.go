@@ -44,7 +44,7 @@ type NewsResponse struct {
 	UploaderName string    `db:"uploader_name" json:"uploader_name"`
 	Title        string    `db:"title" json:"title"`
 	Description  string    `db:"description" json:"description"`
-	MediaID      *uint     `db:"media_id" json:"media_id"`
+	Media        string    `db:"media" json:"media"`
 	Source       string    `db:"source" json:"source"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 }
@@ -60,7 +60,7 @@ type NewsOutput struct {
 	Uploader    NewsRef `json:"uploader"`
 	Title       string  `json:"title"`
 	Description string  `json:"description"`
-	MediaID     *uint   `json:"media_id"`
+	Media       string  `json:"media"`
 	Source      string  `json:"source"`
 	CreatedAt   string  `json:"created_at"`
 }

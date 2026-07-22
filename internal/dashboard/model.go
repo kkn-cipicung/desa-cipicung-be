@@ -37,7 +37,7 @@ type DashboardResponse struct {
 	CategoryName string    `db:"category_name" json:"category_name"`
 	Title        string    `db:"title" json:"title"`
 	Description  string    `db:"description" json:"description"`
-	MediaID      *uint     `db:"media_id" json:"media_id"`
+	Media        string    `db:"media" json:"media"`
 	IsActive     bool      `db:"is_active" json:"is_active"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 }
@@ -48,7 +48,7 @@ type DashboardOutput struct {
 	Category    DashboardRef `json:"category"`
 	Title       string       `json:"title"`
 	Description string       `json:"description"`
-	MediaID     *uint        `json:"media_id"`
+	Media       string       `json:"media"`
 	IsActive    bool         `json:"is_active"`
 	CreatedAt   string       `json:"created_at"`
 }

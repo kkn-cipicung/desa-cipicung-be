@@ -131,16 +131,16 @@ type ProfileOfficialInput struct {
 }
 
 type ProfileOfficialOutput struct {
-	ID          uint    `json:"id"`
-	Name        string  `json:"name"`
-	Position    string  `json:"position"`
-	Phone       string  `json:"phone"`
-	Email       string  `json:"email"`
-	Description string  `json:"description"`
-	OrderNumber int     `json:"order_number"`
-	IsActive    bool    `json:"is_active"`
-	StartDate   string  `json:"start_date"`
-	FinishDate  *string `json:"finish_date"`
+	ID          uint    `db:"id" json:"id"`
+	Name        string  `db:"name" json:"name"`
+	Position    string  `db:"position" json:"position"`
+	Phone       string  `db:"phone" json:"phone"`
+	Email       string  `db:"email" json:"email"`
+	Description string  `db:"description" json:"description"`
+	OrderNumber int     `db:"order_number" json:"order_number"`
+	IsActive    bool    `db:"is_active" json:"is_active"`
+	StartDate   string  `db:"start_date" json:"start_date"`
+	FinishDate  *string `db:"finish_date" json:"finish_date"`
 }
 
 type ProfileRegionBoundaryResponse struct {

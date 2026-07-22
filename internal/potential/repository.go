@@ -86,9 +86,10 @@ func (r *repository) List(ctx context.Context, payload ListPotentialPayload) ([]
 			COALESCE(p.title, '') AS title, COALESCE(p.subtitle, '') AS subtitle,
 			COALESCE(p.slug, '') AS slug, COALESCE(p.description, '') AS description,
 			p.location_id, COALESCE(p.owner_name, '') AS owner_name,
-			COALESCE(p.owner_msisdn, '') AS owner_msisdn, p.media_id, p.created_at
+			COALESCE(p.owner_msisdn, '') AS owner_msisdn, COALESCE(m.file_path, '') AS media, p.created_at
 		FROM potentials p
 		LEFT JOIN categories c ON p.category_id = c.id
+		LEFT JOIN media m ON p.media_id = m.id
 		ORDER BY p.id DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -108,9 +109,10 @@ func (r *repository) FindByID(ctx context.Context, payload PotentialPayload) (*P
 			COALESCE(p.title, '') AS title, COALESCE(p.subtitle, '') AS subtitle,
 			COALESCE(p.slug, '') AS slug, COALESCE(p.description, '') AS description,
 			p.location_id, COALESCE(p.owner_name, '') AS owner_name,
-			COALESCE(p.owner_msisdn, '') AS owner_msisdn, p.media_id, p.created_at
+			COALESCE(p.owner_msisdn, '') AS owner_msisdn, COALESCE(m.file_path, '') AS media, p.created_at
 		FROM potentials p
 		LEFT JOIN categories c ON p.category_id = c.id
+		LEFT JOIN media m ON p.media_id = m.id
 		WHERE p.id = $1
 	`
 

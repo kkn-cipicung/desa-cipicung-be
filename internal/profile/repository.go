@@ -112,7 +112,12 @@ func (r *repository) FindByID(ctx context.Context, payload ProfilePayload) (*Pro
 	`
 	if err := r.db.GetContext(ctx, &result, query, payload.ID, headmanPosition); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrProfileNotFound
+			var fallbackResult ProfileResponse
+			fallbackQuery := profileSelectQuery() + ` ORDER BY v.id ASC LIMIT 1 `
+			if fallbackErr := r.db.GetContext(ctx, &fallbackResult, fallbackQuery, headmanPosition); fallbackErr == nil {
+				return &fallbackResult, nil
+			}
+			return &ProfileResponse{Mission: []string{}}, nil
 		}
 		return nil, err
 	}
@@ -133,7 +138,7 @@ func (r *repository) FindRegionBoundary(ctx context.Context) (*ProfileRegionBoun
 	`
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrProfileNotFound
+			return &ProfileRegionBoundaryResponse{}, nil
 		}
 		return nil, err
 	}
@@ -150,7 +155,7 @@ func (r *repository) FindVisionMission(ctx context.Context) (*ProfileVisionMissi
 	`
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrProfileNotFound
+			return &ProfileVisionMissionResponse{Mission: []string{}}, nil
 		}
 		return nil, err
 	}
@@ -172,6 +177,9 @@ func (r *repository) FindGovernmentStructure(ctx context.Context) ([]GovernmentS
 	if err := r.db.SelectContext(ctx, &results, query, headmanPosition); err != nil {
 		return nil, err
 	}
+	if results == nil {
+		results = []GovernmentStructureResponse{}
+	}
 	return results, nil
 }
 
@@ -186,7 +194,7 @@ func (r *repository) FindResourcePotential(ctx context.Context) (ResourcePotenti
 	`
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ResourcePotentialResponse{}, ErrProfileNotFound
+			return ResourcePotentialResponse{}, nil
 		}
 		return ResourcePotentialResponse{}, err
 	}

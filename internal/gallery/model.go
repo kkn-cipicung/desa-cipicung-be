@@ -39,11 +39,13 @@ type GalleryListOutput struct {
 	ID    uint   `json:"id"`
 	Title string `json:"title"`
 	Image string `json:"image"`
+	Media string `json:"media"`
 }
 
 type GalleryDetailOutput struct {
 	Title       string       `json:"title"`
 	Image       string       `json:"image"`
+	Media       string       `json:"media"`
 	Description string       `json:"description"`
 	Category    []GalleryRef `json:"category"`
 }

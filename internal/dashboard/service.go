@@ -147,7 +147,7 @@ func mapDashboardOutput(item DashboardResponse) DashboardOutput {
 		},
 		Title:       item.Title,
 		Description: item.Description,
-		MediaID:     item.MediaID,
+		Media:       item.Media,
 		IsActive:    item.IsActive,
 		CreatedAt:   utils.FormatTimestamp(item.CreatedAt),
 	}

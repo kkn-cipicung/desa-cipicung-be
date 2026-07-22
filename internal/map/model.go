@@ -17,16 +17,20 @@ type MapPayload struct {
 }
 
 type MapResponse struct {
+	ID         uint   `db:"id" json:"id"`
 	Elevation  string `db:"elevation" json:"elevation"`
 	Coordinate string `db:"coordinate" json:"coordinate"`
 	HamletOne  int64  `db:"hamlet_one" json:"hamlet_one"`
 	HamletTwo  int64  `db:"hamlet_two" json:"hamlet_two"`
+	IsActive   bool   `db:"is_active" json:"is_active"`
 }
 
 type MapOutput struct {
+	ID         uint   `json:"id"`
 	Elevation  string `json:"elevation"`
 	Coordinate string `json:"coordinate"`
 	HamletOne  int64  `json:"hamlet_one"`
 	HamletTwo  int64  `json:"hamlet_two"`
 	Population int64  `json:"population"`
+	IsActive   bool   `json:"is_active"`
 }

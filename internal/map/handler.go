@@ -51,6 +51,16 @@ func (h *Handler) FindActive(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Active map retrieved successfully", mapDetail)
 }
 
+func (h *Handler) List(c *gin.Context) {
+	maps, err := h.service.List(c.Request.Context())
+	if err != nil {
+		handleMapError(c, err, "Failed to list maps")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Maps retrieved successfully", maps)
+}
+
 func (h *Handler) Update(c *gin.Context) {
 	var payload EditMapPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {

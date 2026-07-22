@@ -59,7 +59,7 @@ type PotentialResponse struct {
 	LocationID   *uint      `db:"location_id" json:"location_id"`
 	OwnerName    string     `db:"owner_name" json:"owner_name"`
 	OwnerMsisdn  string     `db:"owner_msisdn" json:"owner_msisdn"`
-	MediaID      *uint      `db:"media_id" json:"media_id"`
+	Media        string     `db:"media" json:"media"`
 	CreatedAt    *time.Time `db:"created_at" json:"created_at"`
 }
 
@@ -72,7 +72,7 @@ type PotentialOutput struct {
 	Description string             `json:"description"`
 	Location    *PotentialLocation `json:"location"`
 	Owner       PotentialOwner     `json:"owner"`
-	MediaID     *uint              `json:"media_id"`
+	Media       string             `json:"media"`
 	CreatedAt   string             `json:"created_at"`
 }
 

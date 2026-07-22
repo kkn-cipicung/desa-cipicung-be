@@ -216,7 +216,7 @@ func mapPotentialOutput(item PotentialResponse) PotentialOutput {
 			Name:   item.OwnerName,
 			Msisdn: item.OwnerMsisdn,
 		},
-		MediaID:   item.MediaID,
+		Media:     item.Media,
 		CreatedAt: createdAt,
 	}
 }

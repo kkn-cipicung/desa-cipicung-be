@@ -64,10 +64,11 @@ func (r *repository) List(ctx context.Context, payload ListNewsPayload) ([]NewsR
 		SELECT d.id, COALESCE(d.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
 			COALESCE(d.uploaded_by, 0) AS uploaded_by, COALESCE(u.name, '') AS uploader_name,
 			COALESCE(d.title, '') AS title, COALESCE(d.description, '') AS description,
-			d.media_id, COALESCE(d.created_at, NOW()) AS created_at
+			COALESCE(m.file_path, '') AS media, COALESCE(d.created_at, NOW()) AS created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
+		LEFT JOIN media m ON d.media_id = m.id
 		ORDER BY d.created_at DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -86,10 +87,11 @@ func (r *repository) FindByID(ctx context.Context, payload NewsByIdPayload) (*Ne
 		SELECT d.id, COALESCE(d.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
 			COALESCE(d.uploaded_by, 0) AS uploaded_by, COALESCE(u.name, '') AS uploader_name,
 			COALESCE(d.title, '') AS title, COALESCE(d.description, '') AS description,
-			d.media_id, COALESCE(d.created_at, NOW()) AS created_at
+			COALESCE(m.file_path, '') AS media, COALESCE(d.created_at, NOW()) AS created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
+		LEFT JOIN media m ON d.media_id = m.id
 		WHERE d.id = $1
 	`
 
@@ -171,10 +173,11 @@ func (r *repository) FindByDate(ctx context.Context, payload NewsByDatePayload) 
 		SELECT d.id, COALESCE(d.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
 			COALESCE(d.uploaded_by, 0) AS uploaded_by, COALESCE(u.name, '') AS uploader_name,
 			COALESCE(d.title, '') AS title, COALESCE(d.description, '') AS description,
-			d.media_id, COALESCE(d.created_at, NOW()) AS created_at
+			COALESCE(m.file_path, '') AS media, COALESCE(d.created_at, NOW()) AS created_at
 		FROM documents d
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
+		LEFT JOIN media m ON d.media_id = m.id
 		WHERE d.created_at::date = $1
 		ORDER BY d.created_at DESC
 	`

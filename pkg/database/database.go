@@ -43,6 +43,33 @@ func Connect(cfg Config) (*sqlx.DB, error) {
 
 	DB = db
 	log.Println("Successfully connected to PostgreSQL database:", cfg.DBName)
+	runAutoMigrations(db)
 
 	return db, nil
+}
+
+func runAutoMigrations(db *sqlx.DB) {
+	query := `
+		ALTER TABLE villages
+			ADD COLUMN IF NOT EXISTS website VARCHAR(255),
+			ADD COLUMN IF NOT EXISTS region TEXT,
+			ADD COLUMN IF NOT EXISTS hamlet_one BIGINT,
+			ADD COLUMN IF NOT EXISTS hamlet_two BIGINT,
+			ADD COLUMN IF NOT EXISTS north_border TEXT,
+			ADD COLUMN IF NOT EXISTS east_border TEXT,
+			ADD COLUMN IF NOT EXISTS south_border TEXT,
+			ADD COLUMN IF NOT EXISTS west_border TEXT,
+			ADD COLUMN IF NOT EXISTS area TEXT,
+			ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT FALSE;
+
+		CREATE TABLE IF NOT EXISTS potential_detail (
+			id BIGSERIAL PRIMARY KEY,
+			title TEXT NOT NULL DEFAULT '',
+			detail TEXT NOT NULL DEFAULT '',
+			description TEXT NOT NULL DEFAULT ''
+		);
+	`
+	if _, err := db.Exec(query); err != nil {
+		log.Println("Auto migration notice:", err)
+	}
 }

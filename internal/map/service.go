@@ -12,6 +12,7 @@ type Service interface {
 	Create(ctx context.Context, payload AddMapPayload) error
 	Detail(ctx context.Context) (*MapOutput, error)
 	FindActive(ctx context.Context) (*MapOutput, error)
+	List(ctx context.Context) ([]MapOutput, error)
 	Update(ctx context.Context, payload EditMapPayload) error
 	Activate(ctx context.Context, payload MapPayload) error
 	Delete(ctx context.Context, payload MapPayload) error
@@ -49,6 +50,18 @@ func (s *service) FindActive(ctx context.Context) (*MapOutput, error) {
 	}
 	output := mapMapOutput(*item)
 	return &output, nil
+}
+
+func (s *service) List(ctx context.Context) ([]MapOutput, error) {
+	items, err := s.repository.FindList(ctx)
+	if err != nil {
+		return nil, err
+	}
+	outputs := make([]MapOutput, len(items))
+	for i, item := range items {
+		outputs[i] = mapMapOutput(item)
+	}
+	return outputs, nil
 }
 
 func (s *service) Update(ctx context.Context, payload EditMapPayload) error {
@@ -105,10 +118,12 @@ func validateMapPayload(payload AddMapPayload) error {
 
 func mapMapOutput(item MapResponse) MapOutput {
 	return MapOutput{
+		ID:         item.ID,
 		Elevation:  item.Elevation,
 		Coordinate: item.Coordinate,
 		HamletOne:  item.HamletOne,
 		HamletTwo:  item.HamletTwo,
 		Population: item.HamletOne + item.HamletTwo,
+		IsActive:   item.IsActive,
 	}
 }

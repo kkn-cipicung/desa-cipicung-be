@@ -50,7 +50,7 @@ func (r *repository) Detail(ctx context.Context) (*ContactResponse, error) {
 	`
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrContactNotFound
+			return &ContactResponse{}, nil
 		}
 		return nil, err
 	}
