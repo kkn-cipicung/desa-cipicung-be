@@ -59,7 +59,7 @@ func ErrorResponseJSONWithDetail(c *gin.Context, statusCode int, message string,
 }
 
 func PublicErrorDetail(statusCode int, err error) string {
-	if err == nil || statusCode >= http.StatusInternalServerError {
+	if err == nil {
 		return ""
 	}
 

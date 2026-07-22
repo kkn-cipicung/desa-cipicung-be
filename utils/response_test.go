@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
 )
@@ -24,13 +25,11 @@ func TestPublicErrorDetailHidesJSONUnmarshalTypeInternals(t *testing.T) {
 	}
 }
 
-func TestPublicErrorDetailHidesInternalServerErrors(t *testing.T) {
-	err := json.Unmarshal([]byte(`{"hamlet_one":"wrong"}`), &struct {
-		HamletOne *int64 `json:"hamlet_one"`
-	}{})
+func TestPublicErrorDetailIncludesInternalServerErrors(t *testing.T) {
+	err := errors.New("database error detail")
 
 	got := PublicErrorDetail(http.StatusInternalServerError, err)
-	if got != "" {
-		t.Fatalf("PublicErrorDetail() = %q, want empty string", got)
+	if got != "database error detail" {
+		t.Fatalf("PublicErrorDetail() = %q, want %q", got, "database error detail")
 	}
 }
