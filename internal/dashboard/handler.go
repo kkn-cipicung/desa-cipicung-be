@@ -76,6 +76,16 @@ func (h *Handler) FindActive(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Active dashboard retrieved successfully", dashboard)
 }
 
+func (h *Handler) FindOverview(c *gin.Context) {
+	overview, err := h.service.FindOverview(c.Request.Context())
+	if err != nil {
+		handleDashboardError(c, err, "Failed to get dashboard overview")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Overview retrieved successfully", overview)
+}
+
 func (h *Handler) Update(c *gin.Context) {
 	var payload EditDashboardPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {

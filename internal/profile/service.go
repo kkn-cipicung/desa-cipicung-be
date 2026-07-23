@@ -13,10 +13,12 @@ import (
 type Service interface {
 	Create(ctx context.Context, payload AddProfilePayload) error
 	Detail(ctx context.Context) (*ProfileOutput, error)
+	FindActive(ctx context.Context) (*ProfileOutput, error)
 	FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error)
 	FindVisionMission(ctx context.Context) (*ProfileVisionMissionOutput, error)
 	FindGovernmentStructure(ctx context.Context) ([]GovernmentStructureResponse, error)
 	FindResourcePotential(ctx context.Context) (ResourcePotentialResponse, error)
+	Activate(ctx context.Context, payload ProfilePayload) error
 	Delete(ctx context.Context, payload ProfilePayload) error
 }
 
@@ -57,6 +59,28 @@ func (s *service) Detail(ctx context.Context) (*ProfileOutput, error) {
 		}
 	}
 	return &output, nil
+}
+
+func (s *service) FindActive(ctx context.Context) (*ProfileOutput, error) {
+	item, err := s.repository.FindActive(ctx)
+	if err != nil {
+		return nil, err
+	}
+	output := mapProfileOutput(*item)
+	if item.ID != 0 {
+		headmen, err := s.repository.FindHeadmen(ctx, item.ID)
+		if err == nil {
+			output.Headmen = headmen
+		}
+	}
+	return &output, nil
+}
+
+func (s *service) Activate(ctx context.Context, payload ProfilePayload) error {
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: profile id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	return s.repository.Activate(ctx, payload)
 }
 
 func (s *service) FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error) {
@@ -337,6 +361,7 @@ func mapProfileOutput(item ProfileResponse) ProfileOutput {
 		WestBorder:  item.WestBorder,
 		Area:        item.Area,
 		Population:  item.Population,
+		IsActive:    item.IsActive,
 		CreatedAt:   utils.FormatTimestamp(item.CreatedAt),
 		UpdatedAt:   utils.FormatTimestamp(item.UpdatedAt),
 	}

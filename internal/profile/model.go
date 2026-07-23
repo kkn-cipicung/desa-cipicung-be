@@ -72,6 +72,7 @@ type ProfileResponse struct {
 	WestBorder         string         `db:"west_border" json:"west_border"`
 	Area               string         `db:"area" json:"area"`
 	Population         string         `db:"population" json:"population"`
+	IsActive           bool           `db:"is_active" json:"is_active"`
 	CreatedAt          time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt          time.Time      `db:"updated_at" json:"updated_at"`
 	HeadmanID          uint           `db:"headman_id" json:"headman_id"`
@@ -114,6 +115,7 @@ type ProfileOutput struct {
 	Population  string                  `json:"population"`
 	Headman     *ProfileOfficialOutput  `json:"headman"`
 	Headmen     []ProfileOfficialOutput `json:"headmen"`
+	IsActive    bool                    `json:"is_active"`
 	CreatedAt   string                  `json:"created_at"`
 	UpdatedAt   string                  `json:"updated_at"`
 }

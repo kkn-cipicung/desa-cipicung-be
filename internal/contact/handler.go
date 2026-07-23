@@ -41,6 +41,36 @@ func (h *Handler) Detail(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Contact retrieved successfully", contact)
 }
 
+func (h *Handler) FindActive(c *gin.Context) {
+	contact, err := h.service.FindActive(c.Request.Context())
+	if err != nil {
+		handleContactError(c, err, "Failed to get active contact")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Active contact retrieved successfully", contact)
+}
+
+func (h *Handler) Activate(c *gin.Context) {
+	var payload ContactPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	if payload.ID == 0 {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid contact ID", nil)
+		return
+	}
+
+	if err := h.service.Activate(c.Request.Context(), payload); err != nil {
+		handleContactError(c, err, "Failed to activate contact")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Contact activated successfully", nil)
+}
+
 func (h *Handler) Update(c *gin.Context) {
 	var payload EditContactPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {

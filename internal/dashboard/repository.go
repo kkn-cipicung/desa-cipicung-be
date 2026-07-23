@@ -18,6 +18,7 @@ type Repository interface {
 	List(ctx context.Context, payload ListDashboardPayload) ([]DashboardResponse, error)
 	Detail(ctx context.Context) (*DashboardResponse, error)
 	FindActive(ctx context.Context) (*DashboardResponse, error)
+	FindOverview(ctx context.Context) (*DashboardOverviewOutput, error)
 	Update(ctx context.Context, payload EditDashboardPayload, media *utils.MediaPayload) error
 	Activate(ctx context.Context, payload DashboardPayload) error
 	Delete(ctx context.Context, payload DashboardPayload) error
@@ -139,6 +140,29 @@ func (r *repository) FindActive(ctx context.Context) (*DashboardResponse, error)
 			return &DashboardResponse{}, nil
 		}
 		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (r *repository) FindOverview(ctx context.Context) (*DashboardOverviewOutput, error) {
+	var result DashboardOverviewOutput
+
+	query := `
+		SELECT 
+			COALESCE((SELECT title FROM villages WHERE is_active = TRUE AND title <> '' ORDER BY id DESC LIMIT 1), (SELECT title FROM villages WHERE title <> '' ORDER BY id DESC LIMIT 1), '') AS title,
+			COALESCE((SELECT description FROM villages WHERE is_active = TRUE AND description <> '' ORDER BY id DESC LIMIT 1), (SELECT description FROM villages WHERE description <> '' ORDER BY id DESC LIMIT 1), '') AS description,
+			COALESCE((SELECT m.file_path FROM villages v JOIN media m ON v.id = m.entity_id AND m.entity_type = 'village' WHERE v.is_active = TRUE ORDER BY v.id DESC LIMIT 1), (SELECT m.file_path FROM villages v JOIN media m ON v.id = m.entity_id AND m.entity_type = 'village' ORDER BY v.id DESC LIMIT 1), '') AS media,
+			COALESCE((SELECT area FROM villages WHERE is_active = TRUE AND area <> '' ORDER BY id DESC LIMIT 1), (SELECT area FROM villages WHERE area <> '' ORDER BY id DESC LIMIT 1), '') AS area,
+			COALESCE((SELECT CAST(NULLIF(population, '') AS BIGINT) FROM villages WHERE is_active = TRUE AND population <> '' ORDER BY id DESC LIMIT 1), (SELECT total_population FROM villages WHERE is_active = TRUE ORDER BY id DESC LIMIT 1), (SELECT CAST(NULLIF(population, '') AS BIGINT) FROM villages WHERE population <> '' ORDER BY id DESC LIMIT 1), 0) AS population,
+			COALESCE((SELECT total_family FROM villages WHERE is_active = TRUE ORDER BY id DESC LIMIT 1), (SELECT total_family FROM villages ORDER BY id DESC LIMIT 1), 0) AS total_family,
+			COALESCE((SELECT CASE WHEN hamlet_one IS NOT NULL AND hamlet_two IS NOT NULL THEN 2 ELSE 1 END FROM villages WHERE is_active = TRUE ORDER BY id DESC LIMIT 1), (SELECT CASE WHEN hamlet_one IS NOT NULL AND hamlet_two IS NOT NULL THEN 2 ELSE 1 END FROM villages ORDER BY id DESC LIMIT 1), 0) AS total_hamlet,
+			COALESCE((SELECT COUNT(*) FROM news), 0) AS total_news,
+			COALESCE((SELECT COUNT(*) FROM potentials), 0) AS total_potential
+	`
+
+	if err := r.db.GetContext(ctx, &result, query); err != nil {
+		return &DashboardOverviewOutput{}, nil
 	}
 
 	return &result, nil

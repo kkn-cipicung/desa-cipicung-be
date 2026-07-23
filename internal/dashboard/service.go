@@ -13,6 +13,7 @@ type Service interface {
 	List(ctx context.Context, payload ListDashboardPayload) ([]DashboardOutput, error)
 	Detail(ctx context.Context) (*DashboardOutput, error)
 	FindActive(ctx context.Context) (*DashboardOutput, error)
+	FindOverview(ctx context.Context) (*DashboardOverviewOutput, error)
 	Update(ctx context.Context, payload EditDashboardPayload) error
 	Activate(ctx context.Context, payload DashboardPayload) error
 	Delete(ctx context.Context, payload DashboardPayload) error
@@ -85,6 +86,10 @@ func (s *service) FindActive(ctx context.Context) (*DashboardOutput, error) {
 	}
 	output := mapDashboardOutput(*item)
 	return &output, nil
+}
+
+func (s *service) FindOverview(ctx context.Context) (*DashboardOverviewOutput, error) {
+	return s.repository.FindOverview(ctx)
 }
 
 func (s *service) Update(ctx context.Context, payload EditDashboardPayload) error {

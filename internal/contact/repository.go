@@ -13,7 +13,9 @@ var ErrContactNotFound = errors.New("contact not found")
 type Repository interface {
 	Create(ctx context.Context, payload AddContactPayload) error
 	Detail(ctx context.Context) (*ContactResponse, error)
+	FindActive(ctx context.Context) (*ContactResponse, error)
 	Update(ctx context.Context, payload EditContactPayload) error
+	Activate(ctx context.Context, payload ContactPayload) error
 	Delete(ctx context.Context, payload ContactPayload) error
 }
 
@@ -43,7 +45,7 @@ func (r *repository) Create(ctx context.Context, payload AddContactPayload) erro
 func (r *repository) Detail(ctx context.Context) (*ContactResponse, error) {
 	var result ContactResponse
 	query := `
-		SELECT name, province, regency, district, postal_code, address, phone, email, website
+		SELECT id, name, province, regency, district, postal_code, address, phone, email, website, COALESCE(is_active, FALSE) AS is_active
 		FROM villages
 		ORDER BY id DESC
 		LIMIT 1
@@ -55,6 +57,59 @@ func (r *repository) Detail(ctx context.Context) (*ContactResponse, error) {
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (r *repository) FindActive(ctx context.Context) (*ContactResponse, error) {
+	var result ContactResponse
+	query := `
+		SELECT id, name, province, regency, district, postal_code, address, phone, email, website, COALESCE(is_active, FALSE) AS is_active
+		FROM villages
+		WHERE is_active = TRUE
+		ORDER BY id DESC
+		LIMIT 1
+	`
+	if err := r.db.GetContext(ctx, &result, query); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			var fallbackResult ContactResponse
+			fallbackQuery := `
+				SELECT id, name, province, regency, district, postal_code, address, phone, email, website, COALESCE(is_active, FALSE) AS is_active
+				FROM villages
+				ORDER BY id DESC
+				LIMIT 1
+			`
+			if fallbackErr := r.db.GetContext(ctx, &fallbackResult, fallbackQuery); fallbackErr == nil {
+				return &fallbackResult, nil
+			}
+			return &ContactResponse{}, nil
+		}
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (r *repository) Activate(ctx context.Context, payload ContactPayload) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var exists bool
+	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM villages WHERE id = $1)`, payload.ID); err != nil {
+		return err
+	}
+	if !exists {
+		return ErrContactNotFound
+	}
+
+	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = FALSE WHERE id <> $1 AND is_active = TRUE`, payload.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, payload.ID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *repository) Update(ctx context.Context, payload EditContactPayload) error {

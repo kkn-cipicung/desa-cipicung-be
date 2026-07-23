@@ -57,3 +57,15 @@ type DashboardRef struct {
 	ID   uint   `json:"id"`
 	Name string `json:"name"`
 }
+
+type DashboardOverviewOutput struct {
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	Media          string `json:"media"`
+	Area           string `json:"area"`
+	Population     int64  `json:"population"`
+	TotalFamily    int64  `json:"total_family"`
+	TotalHamlet    int64  `json:"total_hamlet"`
+	TotalNews      int64  `json:"total_news"`
+	TotalPotential int64  `json:"total_potential"`
+}

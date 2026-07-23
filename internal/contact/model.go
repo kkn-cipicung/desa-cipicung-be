@@ -22,6 +22,7 @@ type ContactPayload struct {
 }
 
 type ContactResponse struct {
+	ID         uint   `db:"id" json:"id"`
 	Name       string `db:"name" json:"name"`
 	Province   string `db:"province" json:"province"`
 	Regency    string `db:"regency" json:"regency"`
@@ -31,13 +32,16 @@ type ContactResponse struct {
 	Phone      string `db:"phone" json:"phone"`
 	Email      string `db:"email" json:"email"`
 	Website    string `db:"website" json:"website"`
+	IsActive   bool   `db:"is_active" json:"is_active"`
 }
 
 type ContactOutput struct {
+	ID          uint                 `json:"id"`
 	Office      ContactOffice        `json:"office"`
 	Contact     ContactInfo          `json:"contact"`
 	SocialMedia []ContactSocialMedia `json:"social_media"`
 	ServiceHour []ContactServiceHour `json:"service_hour"`
+	IsActive    bool                 `json:"is_active"`
 }
 
 type ContactOffice struct {

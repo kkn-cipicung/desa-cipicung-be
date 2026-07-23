@@ -11,7 +11,9 @@ import (
 type Service interface {
 	Create(ctx context.Context, payload AddContactPayload) error
 	Detail(ctx context.Context) (*ContactOutput, error)
+	FindActive(ctx context.Context) (*ContactOutput, error)
 	Update(ctx context.Context, payload EditContactPayload) error
+	Activate(ctx context.Context, payload ContactPayload) error
 	Delete(ctx context.Context, payload ContactPayload) error
 }
 
@@ -37,7 +39,28 @@ func (s *service) Detail(ctx context.Context) (*ContactOutput, error) {
 		return nil, err
 	}
 
+	return mapContactOutput(item), nil
+}
+
+func (s *service) FindActive(ctx context.Context) (*ContactOutput, error) {
+	item, err := s.repository.FindActive(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return mapContactOutput(item), nil
+}
+
+func (s *service) Activate(ctx context.Context, payload ContactPayload) error {
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: contact id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	return s.repository.Activate(ctx, payload)
+}
+
+func mapContactOutput(item *ContactResponse) *ContactOutput {
 	return &ContactOutput{
+		ID: item.ID,
 		Office: ContactOffice{
 			Name:       fmt.Sprintf("Kantor Kepala Desa %s", item.Name),
 			Address:    item.Address,
@@ -57,7 +80,8 @@ func (s *service) Detail(ctx context.Context) (*ContactOutput, error) {
 			{Day: "Jumat", Time: "08.00-11.30"},
 			{Day: "Sabtu-Minggu", Time: "Tutup"},
 		},
-	}, nil
+		IsActive: item.IsActive,
+	}
 }
 
 func (s *service) Update(ctx context.Context, payload EditContactPayload) error {

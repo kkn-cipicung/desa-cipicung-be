@@ -16,6 +16,7 @@ const headmanPosition = "kepala-desa"
 type Repository interface {
 	Create(ctx context.Context, payload AddProfilePayload) error
 	Detail(ctx context.Context) (*ProfileResponse, error)
+	FindActive(ctx context.Context) (*ProfileResponse, error)
 	FindFirst(ctx context.Context) (*ProfileResponse, error)
 	FindHeadmen(ctx context.Context, villageID uint) ([]ProfileOfficialOutput, error)
 	FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error)
@@ -23,6 +24,7 @@ type Repository interface {
 	FindGovernmentStructure(ctx context.Context) ([]GovernmentStructureResponse, error)
 	FindResourcePotential(ctx context.Context) (ResourcePotentialResponse, error)
 	Update(ctx context.Context, payload EditProfilePayload) error
+	Activate(ctx context.Context, payload ProfilePayload) error
 	Delete(ctx context.Context, payload ProfilePayload) error
 }
 
@@ -116,6 +118,48 @@ func (r *repository) Detail(ctx context.Context) (*ProfileResponse, error) {
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (r *repository) FindActive(ctx context.Context) (*ProfileResponse, error) {
+	var result ProfileResponse
+	query := profileSelectQuery() + ` WHERE v.is_active = TRUE ORDER BY v.id DESC LIMIT 1 `
+	if err := r.db.GetContext(ctx, &result, query, headmanPosition); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			var fallbackResult ProfileResponse
+			fallbackQuery := profileSelectQuery() + ` ORDER BY v.id ASC LIMIT 1 `
+			if fallbackErr := r.db.GetContext(ctx, &fallbackResult, fallbackQuery, headmanPosition); fallbackErr == nil {
+				return &fallbackResult, nil
+			}
+			return &ProfileResponse{Mission: []string{}}, nil
+		}
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (r *repository) Activate(ctx context.Context, payload ProfilePayload) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var exists bool
+	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM villages WHERE id = $1)`, payload.ID); err != nil {
+		return err
+	}
+	if !exists {
+		return ErrProfileNotFound
+	}
+
+	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = FALSE WHERE id <> $1 AND is_active = TRUE`, payload.ID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, payload.ID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *repository) FindFirst(ctx context.Context) (*ProfileResponse, error) {
@@ -330,6 +374,7 @@ func profileSelectQuery() string {
 			COALESCE(v.east_border, '') AS east_border, COALESCE(v.south_border, '') AS south_border,
 			COALESCE(v.west_border, '') AS west_border, COALESCE(v.area, '') AS area,
 			COALESCE(v.population, '') AS population,
+			COALESCE(v.is_active, FALSE) AS is_active,
 			v.created_at, v.updated_at,
 			COALESCE(o.id, 0) AS headman_id,
 			COALESCE(o.name, '') AS headman_name,
