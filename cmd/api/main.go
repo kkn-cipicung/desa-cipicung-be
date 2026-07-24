@@ -18,6 +18,7 @@ func main() {
 	}
 
 	r := gin.Default()
+	r.MaxMultipartMemory = 5 << 20 // 5 MB
 
 	setupRouter(r, db)
 

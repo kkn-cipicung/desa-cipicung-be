@@ -30,7 +30,7 @@ func setupRouter(r *gin.Engine, db *sqlx.DB) {
 			"https://admin.cipicung.id",
 			"https://cipicung.id",
 		},
-		AllowMethods: []string{"POST", "GET"},
+		AllowMethods: []string{"GET", "POST", "OPTIONS"},
 		AllowHeaders: []string{
 			"Origin",
 			"Content-Type",
