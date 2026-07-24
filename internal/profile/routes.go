@@ -16,5 +16,18 @@ func (h *Handler) RegisterRoutes(router *gin.RouterGroup) {
 		profile.POST("/resource-potential", h.FindResourcePotential)
 		profile.POST("/activate", utils.AuthMiddleware(), h.Activate)
 		profile.POST("/delete", utils.AuthMiddleware(), h.Delete)
+
+		// Official CRUD endpoints (supporting both /official/... and /officials/...)
+		profile.POST("/official/create", utils.AuthMiddleware(), h.CreateOfficial)
+		profile.POST("/official/list", h.ListOfficials)
+		profile.POST("/official/detail", h.DetailOfficial)
+		profile.POST("/official/update", utils.AuthMiddleware(), h.UpdateOfficial)
+		profile.POST("/official/delete", utils.AuthMiddleware(), h.DeleteOfficial)
+
+		profile.POST("/officials/create", utils.AuthMiddleware(), h.CreateOfficial)
+		profile.POST("/officials/list", h.ListOfficials)
+		profile.POST("/officials/detail", h.DetailOfficial)
+		profile.POST("/officials/update", utils.AuthMiddleware(), h.UpdateOfficial)
+		profile.POST("/officials/delete", utils.AuthMiddleware(), h.DeleteOfficial)
 	}
 }

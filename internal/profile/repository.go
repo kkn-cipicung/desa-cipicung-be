@@ -10,6 +10,7 @@ import (
 )
 
 var ErrProfileNotFound = errors.New("profile not found")
+var ErrOfficialNotFound = errors.New("official not found")
 
 const headmanPosition = "kepala-desa"
 
@@ -26,6 +27,11 @@ type Repository interface {
 	Update(ctx context.Context, payload EditProfilePayload) error
 	Activate(ctx context.Context, payload ProfilePayload) error
 	Delete(ctx context.Context, payload ProfilePayload) error
+	CreateOfficial(ctx context.Context, payload AddOfficialPayload) error
+	ListOfficials(ctx context.Context, payload ListOfficialPayload) ([]OfficialResponse, error)
+	FindOfficialByID(ctx context.Context, payload OfficialPayload) (*OfficialResponse, error)
+	UpdateOfficial(ctx context.Context, payload EditOfficialPayload) error
+	DeleteOfficial(ctx context.Context, payload OfficialPayload) error
 }
 
 type repository struct {
@@ -470,4 +476,120 @@ func replaceResourcePotential(ctx context.Context, tx *sqlx.Tx, resource *Resour
 		resource.Title, resource.Detail, resource.Description,
 	)
 	return err
+}
+
+func (r *repository) CreateOfficial(ctx context.Context, payload AddOfficialPayload) error {
+	villageID := payload.VillageID
+	if villageID == 0 {
+		_ = r.db.GetContext(ctx, &villageID, `SELECT id FROM villages ORDER BY is_active DESC, id ASC LIMIT 1`)
+	}
+	if villageID == 0 {
+		villageID = 1
+	}
+
+	query := `
+		INSERT INTO officials (
+			village_id, name, position, phone, email, description, order_number, is_active,
+			start_date, finish_date, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`
+	_, err := r.db.ExecContext(ctx, query,
+		villageID, payload.Name, payload.Position, payload.Phone, payload.Email,
+		payload.Description, payload.OrderNumber, payload.IsActive, payload.StartDate, payload.FinishDate,
+	)
+	return err
+}
+
+func (r *repository) ListOfficials(ctx context.Context, payload ListOfficialPayload) ([]OfficialResponse, error) {
+	var results []OfficialResponse
+	query := `
+		SELECT id, village_id, name, position, COALESCE(phone, '') AS phone, COALESCE(email, '') AS email,
+			COALESCE(description, '') AS description, COALESCE(order_number, 0) AS order_number,
+			COALESCE(is_active, false) AS is_active,
+			CASE WHEN start_date IS NULL THEN NULL ELSE TO_CHAR(start_date, 'YYYY-MM-DD') END AS start_date,
+			CASE WHEN finish_date IS NULL THEN NULL ELSE TO_CHAR(finish_date, 'YYYY-MM-DD') END AS finish_date,
+			COALESCE(TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS created_at,
+			COALESCE(TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS updated_at
+		FROM officials
+		WHERE ($3 = 0 OR village_id = $3)
+		ORDER BY order_number ASC, id ASC
+		LIMIT $1 OFFSET $2
+	`
+	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index, payload.VillageID); err != nil {
+		return nil, err
+	}
+	if results == nil {
+		results = []OfficialResponse{}
+	}
+	return results, nil
+}
+
+func (r *repository) FindOfficialByID(ctx context.Context, payload OfficialPayload) (*OfficialResponse, error) {
+	var result OfficialResponse
+	query := `
+		SELECT id, village_id, name, position, COALESCE(phone, '') AS phone, COALESCE(email, '') AS email,
+			COALESCE(description, '') AS description, COALESCE(order_number, 0) AS order_number,
+			COALESCE(is_active, false) AS is_active,
+			CASE WHEN start_date IS NULL THEN NULL ELSE TO_CHAR(start_date, 'YYYY-MM-DD') END AS start_date,
+			CASE WHEN finish_date IS NULL THEN NULL ELSE TO_CHAR(finish_date, 'YYYY-MM-DD') END AS finish_date,
+			COALESCE(TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS created_at,
+			COALESCE(TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS updated_at
+		FROM officials
+		WHERE id = $1
+	`
+	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrOfficialNotFound
+		}
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (r *repository) UpdateOfficial(ctx context.Context, payload EditOfficialPayload) error {
+	query := `
+		UPDATE officials
+		SET name = $2,
+			position = $3,
+			phone = $4,
+			email = $5,
+			description = $6,
+			order_number = $7,
+			is_active = $8,
+			start_date = $9,
+			finish_date = $10,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
+	`
+	result, err := r.db.ExecContext(ctx, query,
+		payload.ID, payload.Name, payload.Position, payload.Phone, payload.Email,
+		payload.Description, payload.OrderNumber, payload.IsActive, payload.StartDate, payload.FinishDate,
+	)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrOfficialNotFound
+	}
+	return nil
+}
+
+func (r *repository) DeleteOfficial(ctx context.Context, payload OfficialPayload) error {
+	query := `DELETE FROM officials WHERE id = $1`
+	result, err := r.db.ExecContext(ctx, query, payload.ID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrOfficialNotFound
+	}
+	return nil
 }

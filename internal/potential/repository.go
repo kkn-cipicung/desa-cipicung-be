@@ -46,7 +46,7 @@ func (r *repository) Create(ctx context.Context, payload AddPotentialPayload, me
 	`
 
 	var potentialID uint
-	if err := tx.QueryRowContext(ctx, query, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID, payload.OwnerName, payload.OwnerMsisdn).Scan(&potentialID); err != nil {
+	if err := tx.QueryRowContext(ctx, query, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID).Scan(&potentialID); err != nil {
 		return err
 	}
 
@@ -85,8 +85,7 @@ func (r *repository) List(ctx context.Context, payload ListPotentialPayload) ([]
 		SELECT p.id, COALESCE(p.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
 			COALESCE(p.title, '') AS title, COALESCE(p.subtitle, '') AS subtitle,
 			COALESCE(p.slug, '') AS slug, COALESCE(p.description, '') AS description,
-			p.location_id, COALESCE(p.owner_name, '') AS owner_name,
-			COALESCE(p.owner_msisdn, '') AS owner_msisdn, COALESCE(m.file_path, '') AS media, p.created_at
+			p.location_id, COALESCE(m.file_path, '') AS media, p.created_at
 		FROM potentials p
 		LEFT JOIN categories c ON p.category_id = c.id
 		LEFT JOIN media m ON p.media_id = m.id
@@ -150,7 +149,7 @@ func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, m
 			owner_msisdn = $9
 		WHERE id = $1
 	`
-	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID, payload.OwnerName, payload.OwnerMsisdn)
+	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID)
 	if err != nil {
 		return err
 	}

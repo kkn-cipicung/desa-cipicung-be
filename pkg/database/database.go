@@ -68,6 +68,9 @@ func runAutoMigrations(db *sqlx.DB) {
 			detail TEXT NOT NULL DEFAULT '',
 			description TEXT NOT NULL DEFAULT ''
 		);
+
+		ALTER TABLE categories ALTER COLUMN type DROP NOT NULL;
+		ALTER TABLE categories ALTER COLUMN type SET DEFAULT '';
 	`
 	if _, err := db.Exec(query); err != nil {
 		log.Println("Auto migration notice:", err)

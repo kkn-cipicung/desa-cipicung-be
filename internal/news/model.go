@@ -55,14 +55,16 @@ type NewsHeaderResponse struct {
 }
 
 type NewsOutput struct {
-	ID          uint    `json:"id"`
-	Category    NewsRef `json:"category"`
-	Uploader    NewsRef `json:"uploader"`
-	Title       string  `json:"title"`
-	Description string  `json:"description"`
-	Media       string  `json:"media"`
-	Source      string  `json:"source"`
-	CreatedAt   string  `json:"created_at"`
+	ID           uint    `json:"id"`
+	CategoryID   uint    `json:"category_id"`
+	CategoryName string  `json:"category_name"`
+	Category     NewsRef `json:"category"`
+	Uploader     NewsRef `json:"uploader"`
+	Title        string  `json:"title"`
+	Description  string  `json:"description"`
+	Media        string  `json:"media"`
+	Source       string  `json:"source"`
+	CreatedAt    string  `json:"created_at"`
 }
 
 type NewsRef struct {

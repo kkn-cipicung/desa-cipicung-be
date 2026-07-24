@@ -32,9 +32,6 @@ func (s *service) Create(ctx context.Context, payload AddCategoryPayload) error 
 	if payload.Name == "" {
 		return fmt.Errorf("%w: name is required", utils.ErrInvalidPayload)
 	}
-	if payload.Type == "" {
-		return fmt.Errorf("%w: type is required", utils.ErrInvalidPayload)
-	}
 
 	slug := utils.GenerateSlug(payload.Name)
 	return s.repository.Create(ctx, payload, slug)
@@ -71,9 +68,6 @@ func (s *service) Update(ctx context.Context, payload EditCategoryPayload) error
 	}
 	if payload.Name == "" {
 		return fmt.Errorf("%w: name is required", utils.ErrInvalidPayload)
-	}
-	if payload.Type == "" {
-		return fmt.Errorf("%w: type is required", utils.ErrInvalidPayload)
 	}
 
 	slug := utils.GenerateSlug(payload.Name)

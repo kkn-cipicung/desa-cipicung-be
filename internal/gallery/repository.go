@@ -10,7 +10,7 @@ import (
 )
 
 var ErrGalleryNotFound = errors.New("gallery not found")
-var ErrInvalidGalleryCategory = errors.New("category must be type gallery")
+var ErrInvalidGalleryCategory = errors.New("category not found")
 
 type Repository interface {
 	Create(ctx context.Context, payload AddGalleryPayload, media *utils.MediaPayload) error
@@ -39,7 +39,7 @@ func (r *repository) Create(ctx context.Context, payload AddGalleryPayload, medi
 		INSERT INTO galleries (created_by, category_id, title, description, media_id)
 		SELECT $1, $2, $3, $4, NULL
 		FROM categories
-		WHERE id = $2 AND type = 'gallery'
+		WHERE id = $2
 		RETURNING id
 	`
 	var galleryID uint
@@ -62,7 +62,7 @@ func (r *repository) List(ctx context.Context, payload ListGalleryPayload) ([]Ga
 	query := `
 		SELECT g.id, COALESCE(g.title, '') AS title, COALESCE(m.file_path, '') AS image
 		FROM galleries g
-		JOIN categories c ON g.category_id = c.id AND c.type = 'gallery'
+		JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
 		ORDER BY g.id DESC
 		LIMIT $1 OFFSET $2
@@ -82,7 +82,7 @@ func (r *repository) FindByID(ctx context.Context, payload GalleryPayload) (*Gal
 		FROM galleries g
 		LEFT JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
-		WHERE g.id = $1 AND c.type = 'gallery'
+		WHERE g.id = $1
 	`
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -106,8 +106,7 @@ func (r *repository) Update(ctx context.Context, payload EditGalleryPayload, med
 			title = $3,
 			description = $4
 		WHERE id = $1
-			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = galleries.category_id AND c.type = 'gallery')
-			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = $2 AND c.type = 'gallery')
+			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = $2)
 	`
 	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description)
 	if err != nil {
@@ -137,7 +136,6 @@ func (r *repository) Delete(ctx context.Context, payload GalleryPayload) error {
 	query := `
 		DELETE FROM galleries
 		WHERE id = $1
-			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = galleries.category_id AND c.type = 'gallery')
 	`
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
 	if err != nil {

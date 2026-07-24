@@ -29,8 +29,6 @@ func (s *service) Create(ctx context.Context, payload AddPotentialPayload) error
 	payload.Subtitle = strings.TrimSpace(payload.Subtitle)
 	payload.Slug = strings.TrimSpace(payload.Slug)
 	payload.Description = strings.TrimSpace(payload.Description)
-	payload.OwnerName = strings.TrimSpace(payload.OwnerName)
-	payload.OwnerMsisdn = strings.TrimSpace(payload.OwnerMsisdn)
 	payload.LocationID = normalizeOptionalID(payload.LocationID)
 	payload.Location = normalizeLocationInput(payload.Location)
 	if payload.Location != nil && payload.Location.ID != nil {
@@ -51,9 +49,6 @@ func (s *service) Create(ctx context.Context, payload AddPotentialPayload) error
 	}
 	if payload.Description == "" {
 		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
-	}
-	if payload.OwnerName == "" {
-		return fmt.Errorf("%w: owner_name is required", utils.ErrInvalidPayload)
 	}
 	if err := validateLocation(payload.Location); err != nil {
 		return err
@@ -97,8 +92,6 @@ func (s *service) Update(ctx context.Context, payload EditPotentialPayload) erro
 	payload.Subtitle = strings.TrimSpace(payload.Subtitle)
 	payload.Slug = strings.TrimSpace(payload.Slug)
 	payload.Description = strings.TrimSpace(payload.Description)
-	payload.OwnerName = strings.TrimSpace(payload.OwnerName)
-	payload.OwnerMsisdn = strings.TrimSpace(payload.OwnerMsisdn)
 	payload.LocationID = normalizeOptionalID(payload.LocationID)
 	payload.Location = normalizeLocationInput(payload.Location)
 	if payload.Location != nil && payload.Location.ID != nil {
@@ -122,9 +115,6 @@ func (s *service) Update(ctx context.Context, payload EditPotentialPayload) erro
 	}
 	if payload.Description == "" {
 		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
-	}
-	if payload.OwnerName == "" {
-		return fmt.Errorf("%w: owner_name is required", utils.ErrInvalidPayload)
 	}
 	if err := validateLocation(payload.Location); err != nil {
 		return err
@@ -212,11 +202,7 @@ func mapPotentialOutput(item PotentialResponse) PotentialOutput {
 		Slug:        item.Slug,
 		Description: item.Description,
 		Location:    location,
-		Owner: PotentialOwner{
-			Name:   item.OwnerName,
-			Msisdn: item.OwnerMsisdn,
-		},
-		Media:     item.Media,
-		CreatedAt: createdAt,
+		Media:       item.Media,
+		CreatedAt:   createdAt,
 	}
 }

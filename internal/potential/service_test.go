@@ -39,8 +39,6 @@ func TestCreateAllowsOptionalLocationID(t *testing.T) {
 		Title:       "Kerajinan",
 		Slug:        "kerajinan",
 		Description: "Deskripsi",
-		OwnerName:   "Budi",
-		OwnerMsisdn: "08123456789",
 		LocationID:  &locationID,
 		Location:    &PotentialLocationInput{ID: &locationID},
 	})
@@ -67,8 +65,6 @@ func TestUpdateAcceptsNestedLocationID(t *testing.T) {
 		Title:       "Kerajinan",
 		Slug:        "kerajinan",
 		Description: "Deskripsi",
-		OwnerName:   "Budi",
-		OwnerMsisdn: "08123456789",
 		Location:    &PotentialLocationInput{ID: &locationID},
 	})
 	if err != nil {

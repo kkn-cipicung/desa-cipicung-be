@@ -152,7 +152,9 @@ func mapNewsOutputs(items []NewsResponse) []NewsOutput {
 
 func mapNewsOutput(item NewsResponse) NewsOutput {
 	return NewsOutput{
-		ID: item.ID,
+		ID:           item.ID,
+		CategoryID:   item.CategoryID,
+		CategoryName: item.CategoryName,
 		Category: NewsRef{
 			ID:   item.CategoryID,
 			Name: item.CategoryName,

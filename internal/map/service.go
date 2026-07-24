@@ -14,7 +14,6 @@ type Service interface {
 	FindActive(ctx context.Context) (*MapOutput, error)
 	List(ctx context.Context) ([]MapOutput, error)
 	Update(ctx context.Context, payload EditMapPayload) error
-	Activate(ctx context.Context, payload MapPayload) error
 	Delete(ctx context.Context, payload MapPayload) error
 }
 
@@ -73,13 +72,6 @@ func (s *service) Update(ctx context.Context, payload EditMapPayload) error {
 		return err
 	}
 	return s.repository.Update(ctx, payload)
-}
-
-func (s *service) Activate(ctx context.Context, payload MapPayload) error {
-	if payload.ID == 0 {
-		return fmt.Errorf("%w: map id must be greater than 0", utils.ErrInvalidPayload)
-	}
-	return s.repository.Activate(ctx, payload)
 }
 
 func (s *service) Delete(ctx context.Context, payload MapPayload) error {

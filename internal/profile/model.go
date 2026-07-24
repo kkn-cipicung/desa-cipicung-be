@@ -203,3 +203,47 @@ type ResourcePotentialInput struct {
 	Detail      string `json:"detail" binding:"required"`
 	Description string `json:"description"`
 }
+
+type AddOfficialPayload struct {
+	VillageID   uint    `db:"village_id" json:"village_id"`
+	Name        string  `db:"name" json:"name" binding:"required"`
+	Position    string  `db:"position" json:"position" binding:"required"`
+	Phone       string  `db:"phone" json:"phone"`
+	Email       string  `db:"email" json:"email"`
+	Description string  `db:"description" json:"description"`
+	OrderNumber int     `db:"order_number" json:"order_number"`
+	IsActive    bool    `db:"is_active" json:"is_active"`
+	StartDate   *string `db:"start_date" json:"start_date"`
+	FinishDate  *string `db:"finish_date" json:"finish_date"`
+}
+
+type EditOfficialPayload struct {
+	ID uint `db:"id" json:"id" binding:"required"`
+	AddOfficialPayload
+}
+
+type OfficialPayload struct {
+	ID uint `db:"id" json:"id" binding:"required"`
+}
+
+type ListOfficialPayload struct {
+	Limit     int  `form:"limit" json:"limit"`
+	Index     int  `form:"index" json:"index"`
+	VillageID uint `form:"village_id" json:"village_id"`
+}
+
+type OfficialResponse struct {
+	ID          uint    `db:"id" json:"id"`
+	VillageID   uint    `db:"village_id" json:"village_id"`
+	Name        string  `db:"name" json:"name"`
+	Position    string  `db:"position" json:"position"`
+	Phone       string  `db:"phone" json:"phone"`
+	Email       string  `db:"email" json:"email"`
+	Description string  `db:"description" json:"description"`
+	OrderNumber int     `db:"order_number" json:"order_number"`
+	IsActive    bool    `db:"is_active" json:"is_active"`
+	StartDate   *string `db:"start_date" json:"start_date"`
+	FinishDate  *string `db:"finish_date" json:"finish_date"`
+	CreatedAt   string  `db:"created_at" json:"created_at"`
+	UpdatedAt   string  `db:"updated_at" json:"updated_at"`
+}

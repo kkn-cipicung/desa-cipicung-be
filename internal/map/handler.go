@@ -44,11 +44,11 @@ func (h *Handler) Detail(c *gin.Context) {
 func (h *Handler) FindActive(c *gin.Context) {
 	mapDetail, err := h.service.FindActive(c.Request.Context())
 	if err != nil {
-		handleMapError(c, err, "Failed to get active map")
+		handleMapError(c, err, "Failed to get main map")
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Active map retrieved successfully", mapDetail)
+	utils.SuccessResponse(c, http.StatusOK, "Main map retrieved successfully", mapDetail)
 }
 
 func (h *Handler) List(c *gin.Context) {
@@ -81,20 +81,6 @@ func (h *Handler) Update(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Map updated successfully", nil)
 }
 
-func (h *Handler) Activate(c *gin.Context) {
-	var payload MapPayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
-		return
-	}
-
-	if err := h.service.Activate(c.Request.Context(), payload); err != nil {
-		handleMapError(c, err, "Failed to activate map")
-		return
-	}
-
-	utils.SuccessResponse(c, http.StatusOK, "Map activated successfully", nil)
-}
 
 func (h *Handler) Delete(c *gin.Context) {
 	var payload MapPayload

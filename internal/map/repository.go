@@ -18,7 +18,6 @@ type Repository interface {
 	FindActive(ctx context.Context) (*MapResponse, error)
 	FindList(ctx context.Context) ([]MapResponse, error)
 	Update(ctx context.Context, payload EditMapPayload) error
-	Activate(ctx context.Context, payload MapPayload) error
 	Delete(ctx context.Context, payload MapPayload) error
 }
 
@@ -31,9 +30,13 @@ func NewRepository(db *sqlx.DB) Repository {
 }
 
 func (r *repository) Create(ctx context.Context, payload AddMapPayload) error {
-	var firstID uint
-	err := r.db.GetContext(ctx, &firstID, `SELECT id FROM villages ORDER BY id ASC LIMIT 1`)
-	if err == nil && firstID > 0 {
+	var targetID uint
+	err := r.db.GetContext(ctx, &targetID, `SELECT id FROM villages WHERE is_active = TRUE ORDER BY id DESC LIMIT 1`)
+	if err != nil || targetID == 0 {
+		_ = r.db.GetContext(ctx, &targetID, `SELECT id FROM villages ORDER BY id ASC LIMIT 1`)
+	}
+
+	if targetID > 0 {
 		query := `
 			UPDATE villages
 			SET elevation = $2,
@@ -41,13 +44,13 @@ func (r *repository) Create(ctx context.Context, payload AddMapPayload) error {
 				updated_at = CURRENT_TIMESTAMP
 			WHERE id = $1
 		`
-		_, updateErr := r.db.ExecContext(ctx, query, firstID, payload.Elevation, payload.Coordinate)
+		_, updateErr := r.db.ExecContext(ctx, query, targetID, payload.Elevation, payload.Coordinate)
 		return updateErr
 	}
 
 	query := `
-		INSERT INTO villages (name, elevation, coordinate, created_at, updated_at)
-		VALUES ('Map', $1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO villages (name, elevation, coordinate, is_active, created_at, updated_at)
+		VALUES ('Map', $1, $2, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, createErr := r.db.ExecContext(ctx, query, payload.Elevation, payload.Coordinate)
 	return createErr
@@ -121,35 +124,6 @@ func (r *repository) Update(ctx context.Context, payload EditMapPayload) error {
 	return tx.Commit()
 }
 
-func (r *repository) Activate(ctx context.Context, payload MapPayload) error {
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	if err := lockMapActivation(ctx, tx); err != nil {
-		return err
-	}
-
-	var exists bool
-	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM villages WHERE id = $1)`, payload.ID); err != nil {
-		return err
-	}
-	if !exists {
-		return ErrMapNotFound
-	}
-
-	if err := deactivateOtherMaps(ctx, tx, payload.ID); err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, payload.ID); err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
 func (r *repository) Delete(ctx context.Context, payload MapPayload) error {
 	query := `
 		DELETE FROM villages
@@ -185,21 +159,32 @@ func (r *repository) FindList(ctx context.Context) ([]MapResponse, error) {
 func mapSelectQuery() string {
 	return `
 		SELECT id,
-			COALESCE(elevation, '') AS elevation,
-			COALESCE(coordinate, '') AS coordinate,
-			COALESCE(hamlet_one, 0) AS hamlet_one,
-			COALESCE(hamlet_two, 0) AS hamlet_two,
+			COALESCE(
+				NULLIF(elevation, ''),
+				(SELECT elevation FROM villages WHERE is_active = TRUE AND elevation IS NOT NULL AND elevation <> '' ORDER BY id DESC LIMIT 1),
+				(SELECT elevation FROM villages WHERE elevation IS NOT NULL AND elevation <> '' ORDER BY id DESC LIMIT 1),
+				''
+			) AS elevation,
+			COALESCE(
+				NULLIF(coordinate, ''),
+				(SELECT coordinate FROM villages WHERE is_active = TRUE AND coordinate IS NOT NULL AND coordinate <> '' ORDER BY id DESC LIMIT 1),
+				(SELECT coordinate FROM villages WHERE coordinate IS NOT NULL AND coordinate <> '' ORDER BY id DESC LIMIT 1),
+				''
+			) AS coordinate,
+			COALESCE(
+				NULLIF(hamlet_one, 0),
+				(SELECT hamlet_one FROM villages WHERE is_active = TRUE AND hamlet_one IS NOT NULL AND hamlet_one > 0 ORDER BY id DESC LIMIT 1),
+				(SELECT hamlet_one FROM villages WHERE hamlet_one IS NOT NULL AND hamlet_one > 0 ORDER BY id DESC LIMIT 1),
+				0
+			) AS hamlet_one,
+			COALESCE(
+				NULLIF(hamlet_two, 0),
+				(SELECT hamlet_two FROM villages WHERE is_active = TRUE AND hamlet_two IS NOT NULL AND hamlet_two > 0 ORDER BY id DESC LIMIT 1),
+				(SELECT hamlet_two FROM villages WHERE hamlet_two IS NOT NULL AND hamlet_two > 0 ORDER BY id DESC LIMIT 1),
+				0
+			) AS hamlet_two,
 			COALESCE(is_active, FALSE) AS is_active
 		FROM villages
 	`
 }
 
-func lockMapActivation(ctx context.Context, tx *sqlx.Tx) error {
-	_, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock($1)`, mapActivationLockID)
-	return err
-}
-
-func deactivateOtherMaps(ctx context.Context, tx *sqlx.Tx, activeID uint) error {
-	_, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = FALSE WHERE id <> $1 AND is_active = TRUE`, activeID)
-	return err
-}

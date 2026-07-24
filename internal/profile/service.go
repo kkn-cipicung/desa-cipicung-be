@@ -20,6 +20,11 @@ type Service interface {
 	FindResourcePotential(ctx context.Context) (ResourcePotentialResponse, error)
 	Activate(ctx context.Context, payload ProfilePayload) error
 	Delete(ctx context.Context, payload ProfilePayload) error
+	CreateOfficial(ctx context.Context, payload AddOfficialPayload) error
+	ListOfficials(ctx context.Context, payload ListOfficialPayload) ([]OfficialResponse, error)
+	FindOfficialByID(ctx context.Context, payload OfficialPayload) (*OfficialResponse, error)
+	UpdateOfficial(ctx context.Context, payload EditOfficialPayload) error
+	DeleteOfficial(ctx context.Context, payload OfficialPayload) error
 }
 
 type service struct {
@@ -395,4 +400,56 @@ func formatOptionalDatePointer(value *time.Time) *string {
 	}
 	formatted := value.Format("2006-01-02")
 	return &formatted
+}
+
+func (s *service) CreateOfficial(ctx context.Context, payload AddOfficialPayload) error {
+	payload.Name = strings.TrimSpace(payload.Name)
+	payload.Position = strings.TrimSpace(payload.Position)
+	if payload.Name == "" {
+		return fmt.Errorf("%w: name is required", utils.ErrInvalidPayload)
+	}
+	if payload.Position == "" {
+		return fmt.Errorf("%w: position is required", utils.ErrInvalidPayload)
+	}
+	if err := validateOptionalOfficialDates(payload.StartDate, payload.FinishDate); err != nil {
+		return err
+	}
+	return s.repository.CreateOfficial(ctx, payload)
+}
+
+func (s *service) ListOfficials(ctx context.Context, payload ListOfficialPayload) ([]OfficialResponse, error) {
+	utils.NormalizePagination(&payload.Limit, &payload.Index)
+	return s.repository.ListOfficials(ctx, payload)
+}
+
+func (s *service) FindOfficialByID(ctx context.Context, payload OfficialPayload) (*OfficialResponse, error) {
+	if payload.ID == 0 {
+		return nil, fmt.Errorf("%w: official id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	return s.repository.FindOfficialByID(ctx, payload)
+}
+
+func (s *service) UpdateOfficial(ctx context.Context, payload EditOfficialPayload) error {
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: official id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	payload.Name = strings.TrimSpace(payload.Name)
+	payload.Position = strings.TrimSpace(payload.Position)
+	if payload.Name == "" {
+		return fmt.Errorf("%w: name is required", utils.ErrInvalidPayload)
+	}
+	if payload.Position == "" {
+		return fmt.Errorf("%w: position is required", utils.ErrInvalidPayload)
+	}
+	if err := validateOptionalOfficialDates(payload.StartDate, payload.FinishDate); err != nil {
+		return err
+	}
+	return s.repository.UpdateOfficial(ctx, payload)
+}
+
+func (s *service) DeleteOfficial(ctx context.Context, payload OfficialPayload) error {
+	if payload.ID == 0 {
+		return fmt.Errorf("%w: official id must be greater than 0", utils.ErrInvalidPayload)
+	}
+	return s.repository.DeleteOfficial(ctx, payload)
 }
