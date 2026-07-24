@@ -26,8 +26,8 @@ type MediaPayload struct {
 }
 
 type ReplacedMediaPayload struct {
-	ID       uint
-	FilePath string
+	ID       uint   `db:"id"`
+	FilePath string `db:"file_path"`
 }
 
 type LocationPayload struct {
