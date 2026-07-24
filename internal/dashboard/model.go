@@ -69,3 +69,15 @@ type DashboardOverviewOutput struct {
 	TotalNews      int64  `json:"total_news"`
 	TotalPotential int64  `json:"total_potential"`
 }
+
+type AddDashboardOverviewPayload struct {
+	CreatedBy   uint    `db:"created_by" json:"created_by"`
+	Title       string  `db:"title" json:"title" binding:"required"`
+	Description string  `db:"description" json:"description" binding:"required"`
+	MediaID     *string `json:"media_id"`
+	Area        string  `db:"area" json:"area"`
+	Population  int64   `db:"population" json:"population"`
+	TotalFamily int64   `db:"total_family" json:"total_family"`
+	TotalHamlet int64   `json:"total_hamlet"`
+}
+

@@ -86,6 +86,29 @@ func (h *Handler) FindOverview(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Overview retrieved successfully", overview)
 }
 
+func (h *Handler) CreateOverview(c *gin.Context) {
+	var payload AddDashboardOverviewPayload
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
+		return
+	}
+
+	userID, ok := utils.UserIDFromContext(c)
+	if !ok {
+		utils.ErrorResponseJSON(c, http.StatusUnauthorized, "Unauthorized", nil)
+		return
+	}
+	payload.CreatedBy = userID
+
+	overview, err := h.service.CreateOverview(c.Request.Context(), payload)
+	if err != nil {
+		handleDashboardError(c, err, "Failed to create dashboard overview")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "Overview created successfully", overview)
+}
+
 func (h *Handler) Update(c *gin.Context) {
 	var payload EditDashboardPayload
 	if err := c.ShouldBindJSON(&payload); err != nil {

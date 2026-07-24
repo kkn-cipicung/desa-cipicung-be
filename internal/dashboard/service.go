@@ -14,6 +14,7 @@ type Service interface {
 	Detail(ctx context.Context) (*DashboardOutput, error)
 	FindActive(ctx context.Context) (*DashboardOutput, error)
 	FindOverview(ctx context.Context) (*DashboardOverviewOutput, error)
+	CreateOverview(ctx context.Context, payload AddDashboardOverviewPayload) (*DashboardOverviewOutput, error)
 	Update(ctx context.Context, payload EditDashboardPayload) error
 	Activate(ctx context.Context, payload DashboardPayload) error
 	Delete(ctx context.Context, payload DashboardPayload) error
@@ -90,6 +91,31 @@ func (s *service) FindActive(ctx context.Context) (*DashboardOutput, error) {
 
 func (s *service) FindOverview(ctx context.Context) (*DashboardOverviewOutput, error) {
 	return s.repository.FindOverview(ctx)
+}
+
+func (s *service) CreateOverview(ctx context.Context, payload AddDashboardOverviewPayload) (*DashboardOverviewOutput, error) {
+	payload.Title = strings.TrimSpace(payload.Title)
+	payload.Description = strings.TrimSpace(payload.Description)
+
+	if payload.Title == "" {
+		return nil, fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
+	}
+	if payload.Description == "" {
+		return nil, fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
+	}
+
+	media, err := utils.PrepareMedia(payload.MediaID, "uploads/dashboard", payload.CreatedBy)
+	if err != nil {
+		return nil, err
+	}
+
+	overview, err := s.repository.CreateOverview(ctx, payload, media)
+	if err != nil {
+		_ = utils.RemovePreparedMedia(media)
+		return nil, err
+	}
+
+	return overview, nil
 }
 
 func (s *service) Update(ctx context.Context, payload EditDashboardPayload) error {

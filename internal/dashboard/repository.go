@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
 	"cipicung.id/be/utils"
 	"github.com/jmoiron/sqlx"
@@ -19,6 +20,7 @@ type Repository interface {
 	Detail(ctx context.Context) (*DashboardResponse, error)
 	FindActive(ctx context.Context) (*DashboardResponse, error)
 	FindOverview(ctx context.Context) (*DashboardOverviewOutput, error)
+	CreateOverview(ctx context.Context, payload AddDashboardOverviewPayload, media *utils.MediaPayload) (*DashboardOverviewOutput, error)
 	Update(ctx context.Context, payload EditDashboardPayload, media *utils.MediaPayload) error
 	Activate(ctx context.Context, payload DashboardPayload) error
 	Delete(ctx context.Context, payload DashboardPayload) error
@@ -166,6 +168,59 @@ func (r *repository) FindOverview(ctx context.Context) (*DashboardOverviewOutput
 	}
 
 	return &result, nil
+}
+
+func (r *repository) CreateOverview(ctx context.Context, payload AddDashboardOverviewPayload, media *utils.MediaPayload) (*DashboardOverviewOutput, error) {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = FALSE WHERE is_active = TRUE`); err != nil {
+		return nil, err
+	}
+
+	var hamletOne, hamletTwo *string
+	if payload.TotalHamlet >= 1 {
+		h1 := "Dusun I"
+		hamletOne = &h1
+	}
+	if payload.TotalHamlet >= 2 {
+		h2 := "Dusun II"
+		hamletTwo = &h2
+	}
+
+	populationStr := fmt.Sprintf("%d", payload.Population)
+
+	query := `
+		INSERT INTO villages (
+			name, title, description, area, population, total_population, total_family,
+			hamlet_one, hamlet_two, is_active, created_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+		)
+		RETURNING id
+	`
+
+	var villageID uint
+	if err := tx.QueryRowContext(ctx, query,
+		payload.Title, payload.Title, payload.Description, payload.Area,
+		populationStr, payload.Population, payload.TotalFamily,
+		hamletOne, hamletTwo,
+	).Scan(&villageID); err != nil {
+		return nil, err
+	}
+
+	if _, err := utils.AttachMediaToEntity(ctx, tx, media, "village", villageID, "image"); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return r.FindOverview(ctx)
 }
 
 func (r *repository) Update(ctx context.Context, payload EditDashboardPayload, media *utils.MediaPayload) error {

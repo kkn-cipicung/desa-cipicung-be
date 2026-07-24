@@ -12,6 +12,7 @@ func (h *Handler) RegisterRoutes(router *gin.RouterGroup) {
 		dashboard.POST("/list", h.List)
 		dashboard.POST("/active", h.FindActive)
 		dashboard.POST("/overview", h.FindOverview)
+		dashboard.POST("/overview/create", utils.AuthMiddleware(), h.CreateOverview)
 		dashboard.POST("/update", utils.AuthMiddleware(), h.Update)
 		dashboard.POST("/activate", utils.AuthMiddleware(), h.Activate)
 		dashboard.POST("/delete", utils.AuthMiddleware(), h.Delete)
