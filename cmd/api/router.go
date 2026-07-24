@@ -46,6 +46,7 @@ func setupRouter(r *gin.Engine, db *sqlx.DB) {
 	r.Static("/uploads", "./uploads")
 
 	api := r.Group("/api")
+	api.Static("/uploads", "./uploads")
 
 	api.GET("/ping", func(c *gin.Context) {
 		utils.SuccessResponse(c, http.StatusOK, "pong", nil)
