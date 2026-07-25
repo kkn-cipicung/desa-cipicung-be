@@ -71,7 +71,6 @@ type PotentialOutput struct {
 	Slug        string             `json:"slug"`
 	Description string             `json:"description"`
 	Location    *PotentialLocation `json:"location"`
-	Owner       PotentialOwner     `json:"owner"`
 	Media       string             `json:"media"`
 	CreatedAt   string             `json:"created_at"`
 }
@@ -83,9 +82,4 @@ type PotentialRef struct {
 
 type PotentialLocation struct {
 	ID uint `json:"id"`
-}
-
-type PotentialOwner struct {
-	Name   string `json:"name"`
-	Msisdn string `json:"msisdn"`
 }

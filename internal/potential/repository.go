@@ -40,8 +40,8 @@ func (r *repository) Create(ctx context.Context, payload AddPotentialPayload, me
 	}
 
 	query := `
-		INSERT INTO potentials (category_id, title, subtitle, slug, description, location_id, owner_name, owner_msisdn, media_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		INSERT INTO potentials (category_id, title, subtitle, slug, description, location_id, media_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		RETURNING id
 	`
 
@@ -107,8 +107,7 @@ func (r *repository) FindByID(ctx context.Context, payload PotentialPayload) (*P
 		SELECT p.id, COALESCE(p.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
 			COALESCE(p.title, '') AS title, COALESCE(p.subtitle, '') AS subtitle,
 			COALESCE(p.slug, '') AS slug, COALESCE(p.description, '') AS description,
-			p.location_id, COALESCE(p.owner_name, '') AS owner_name,
-			COALESCE(p.owner_msisdn, '') AS owner_msisdn, COALESCE(m.file_path, '') AS media, p.created_at
+			p.location_id, COALESCE(m.file_path, '') AS media, p.created_at
 		FROM potentials p
 		LEFT JOIN categories c ON p.category_id = c.id
 		LEFT JOIN media m ON p.media_id = m.id
@@ -144,9 +143,7 @@ func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, m
 			subtitle = $4,
 			slug = $5,
 			description = $6,
-			location_id = COALESCE($7, location_id),
-			owner_name = $8,
-			owner_msisdn = $9
+			location_id = COALESCE($7, location_id)
 		WHERE id = $1
 	`
 	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID)
