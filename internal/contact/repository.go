@@ -31,13 +31,14 @@ func (r *repository) Create(ctx context.Context, payload AddContactPayload) erro
 	query := `
 		INSERT INTO villages (
 			name, province, regency, district, postal_code, address, phone, email, website,
-			created_at, updated_at
+			ig_usn, tiktok_usn, yt_usn, created_at, updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		payload.Name, payload.Province, payload.Regency, payload.District, payload.PostalCode,
 		payload.Address, payload.Phone, payload.Email, payload.Website,
+		payload.Instagram, payload.TikTok, payload.YouTube,
 	)
 	return err
 }
@@ -45,7 +46,12 @@ func (r *repository) Create(ctx context.Context, payload AddContactPayload) erro
 func (r *repository) Detail(ctx context.Context) (*ContactResponse, error) {
 	var result ContactResponse
 	query := `
-		SELECT id, name, province, regency, district, postal_code, address, phone, email, website, COALESCE(is_active, FALSE) AS is_active
+		SELECT id, COALESCE(name, '') AS name, COALESCE(province, '') AS province,
+			COALESCE(regency, '') AS regency, COALESCE(district, '') AS district,
+			COALESCE(postal_code, '') AS postal_code, COALESCE(address, '') AS address,
+			COALESCE(phone, '') AS phone, COALESCE(email, '') AS email, COALESCE(website, '') AS website,
+			COALESCE(ig_usn, '') AS ig_usn, COALESCE(tiktok_usn, '') AS tiktok_usn, COALESCE(yt_usn, '') AS yt_usn,
+			COALESCE(is_active, FALSE) AS is_active
 		FROM villages
 		ORDER BY id DESC
 		LIMIT 1
@@ -62,7 +68,12 @@ func (r *repository) Detail(ctx context.Context) (*ContactResponse, error) {
 func (r *repository) FindActive(ctx context.Context) (*ContactResponse, error) {
 	var result ContactResponse
 	query := `
-		SELECT id, name, province, regency, district, postal_code, address, phone, email, website, COALESCE(is_active, FALSE) AS is_active
+		SELECT id, COALESCE(name, '') AS name, COALESCE(province, '') AS province,
+			COALESCE(regency, '') AS regency, COALESCE(district, '') AS district,
+			COALESCE(postal_code, '') AS postal_code, COALESCE(address, '') AS address,
+			COALESCE(phone, '') AS phone, COALESCE(email, '') AS email, COALESCE(website, '') AS website,
+			COALESCE(ig_usn, '') AS ig_usn, COALESCE(tiktok_usn, '') AS tiktok_usn, COALESCE(yt_usn, '') AS yt_usn,
+			COALESCE(is_active, FALSE) AS is_active
 		FROM villages
 		WHERE is_active = TRUE
 		ORDER BY id DESC
@@ -72,7 +83,12 @@ func (r *repository) FindActive(ctx context.Context) (*ContactResponse, error) {
 		if errors.Is(err, sql.ErrNoRows) {
 			var fallbackResult ContactResponse
 			fallbackQuery := `
-				SELECT id, name, province, regency, district, postal_code, address, phone, email, website, COALESCE(is_active, FALSE) AS is_active
+				SELECT id, COALESCE(name, '') AS name, COALESCE(province, '') AS province,
+					COALESCE(regency, '') AS regency, COALESCE(district, '') AS district,
+					COALESCE(postal_code, '') AS postal_code, COALESCE(address, '') AS address,
+					COALESCE(phone, '') AS phone, COALESCE(email, '') AS email, COALESCE(website, '') AS website,
+					COALESCE(ig_usn, '') AS ig_usn, COALESCE(tiktok_usn, '') AS tiktok_usn, COALESCE(yt_usn, '') AS yt_usn,
+					COALESCE(is_active, FALSE) AS is_active
 				FROM villages
 				ORDER BY id DESC
 				LIMIT 1
@@ -124,12 +140,16 @@ func (r *repository) Update(ctx context.Context, payload EditContactPayload) err
 			phone = $8,
 			email = $9,
 			website = $10,
+			ig_usn = $11,
+			tiktok_usn = $12,
+			yt_usn = $13,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
 	result, err := r.db.ExecContext(ctx, query,
 		payload.ID, payload.Name, payload.Province, payload.Regency, payload.District,
 		payload.PostalCode, payload.Address, payload.Phone, payload.Email, payload.Website,
+		payload.Instagram, payload.TikTok, payload.YouTube,
 	)
 	if err != nil {
 		return err

@@ -27,7 +27,6 @@ func NewService(repository Repository) Service {
 func (s *service) Create(ctx context.Context, payload AddPotentialPayload) error {
 	payload.Title = strings.TrimSpace(payload.Title)
 	payload.Subtitle = strings.TrimSpace(payload.Subtitle)
-	payload.Slug = strings.TrimSpace(payload.Slug)
 	payload.Description = strings.TrimSpace(payload.Description)
 	payload.LocationID = normalizeOptionalID(payload.LocationID)
 	payload.Location = normalizeLocationInput(payload.Location)
@@ -44,15 +43,13 @@ func (s *service) Create(ctx context.Context, payload AddPotentialPayload) error
 	if payload.Title == "" {
 		return fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
 	}
-	if payload.Slug == "" {
-		return fmt.Errorf("%w: slug is required", utils.ErrInvalidPayload)
-	}
 	if payload.Description == "" {
 		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
 	}
 	if err := validateLocation(payload.Location); err != nil {
 		return err
 	}
+	payload.Slug = utils.GenerateSlug(payload.Title)
 
 	media, err := utils.PrepareMedia(payload.MediaID, "uploads/potentials", payload.UploadedBy)
 	if err != nil {
@@ -90,7 +87,6 @@ func (s *service) FindByID(ctx context.Context, payload PotentialPayload) (*Pote
 func (s *service) Update(ctx context.Context, payload EditPotentialPayload) error {
 	payload.Title = strings.TrimSpace(payload.Title)
 	payload.Subtitle = strings.TrimSpace(payload.Subtitle)
-	payload.Slug = strings.TrimSpace(payload.Slug)
 	payload.Description = strings.TrimSpace(payload.Description)
 	payload.LocationID = normalizeOptionalID(payload.LocationID)
 	payload.Location = normalizeLocationInput(payload.Location)
@@ -110,15 +106,13 @@ func (s *service) Update(ctx context.Context, payload EditPotentialPayload) erro
 	if payload.Title == "" {
 		return fmt.Errorf("%w: title is required", utils.ErrInvalidPayload)
 	}
-	if payload.Slug == "" {
-		return fmt.Errorf("%w: slug is required", utils.ErrInvalidPayload)
-	}
 	if payload.Description == "" {
 		return fmt.Errorf("%w: description is required", utils.ErrInvalidPayload)
 	}
 	if err := validateLocation(payload.Location); err != nil {
 		return err
 	}
+	payload.Slug = utils.GenerateSlug(payload.Title)
 
 	media, err := utils.PrepareMedia(payload.MediaID, "uploads/potentials", payload.UploadedBy)
 	if err != nil {

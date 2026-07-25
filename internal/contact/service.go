@@ -74,13 +74,21 @@ func mapContactOutput(item *ContactResponse) *ContactOutput {
 			Phone:   item.Phone,
 			Website: item.Website,
 		},
-		SocialMedia: []ContactSocialMedia{},
+		SocialMedia: mapContactSocialMedia(item),
 		ServiceHour: []ContactServiceHour{
 			{Day: "Senin-Kamis", Time: "08.00-15.00"},
 			{Day: "Jumat", Time: "08.00-11.30"},
 			{Day: "Sabtu-Minggu", Time: "Tutup"},
 		},
 		IsActive: item.IsActive,
+	}
+}
+
+func mapContactSocialMedia(item *ContactResponse) []ContactSocialMedia {
+	return []ContactSocialMedia{
+		{Name: "Instagram", Username: item.Instagram},
+		{Name: "TikTok", Username: item.TikTok},
+		{Name: "YouTube", Username: item.YouTube},
 	}
 }
 
@@ -112,6 +120,9 @@ func normalizeContactPayload(payload *AddContactPayload) {
 	payload.Phone = strings.TrimSpace(payload.Phone)
 	payload.Email = strings.TrimSpace(payload.Email)
 	payload.Website = strings.TrimSpace(payload.Website)
+	payload.Instagram = strings.TrimSpace(payload.Instagram)
+	payload.TikTok = strings.TrimSpace(payload.TikTok)
+	payload.YouTube = strings.TrimSpace(payload.YouTube)
 }
 
 func validateContactPayload(payload AddContactPayload) error {

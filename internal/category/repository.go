@@ -40,7 +40,8 @@ func (r *repository) List(ctx context.Context, payload ListCategoryPayload) ([]m
 	var results []models.Category
 
 	query := `
-		SELECT id, name, slug, type, created_at
+		SELECT id, COALESCE(name, '') AS name, COALESCE(slug, '') AS slug,
+			COALESCE(type, '') AS type, COALESCE(created_at, NOW()) AS created_at
 		FROM categories
 		WHERE ($3 = '' OR LOWER(TRIM(type)) = $3)
 		ORDER BY id DESC
@@ -56,7 +57,8 @@ func (r *repository) List(ctx context.Context, payload ListCategoryPayload) ([]m
 func (r *repository) FindByID(ctx context.Context, payload CategoryPayload) (*models.Category, error) {
 	var result models.Category
 	query := `
-		SELECT id, name, slug, type, created_at
+		SELECT id, COALESCE(name, '') AS name, COALESCE(slug, '') AS slug,
+			COALESCE(type, '') AS type, COALESCE(created_at, NOW()) AS created_at
 		FROM categories
 		WHERE id = $1
 	`

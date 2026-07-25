@@ -16,6 +16,9 @@ type Village struct {
 	Address     string         `db:"address" json:"address"`
 	Phone       string         `db:"phone" json:"phone"`
 	Email       string         `db:"email" json:"email"`
+	Instagram   string         `db:"ig_usn" json:"ig_usn"`
+	TikTok      string         `db:"tiktok_usn" json:"tiktok_usn"`
+	YouTube     string         `db:"yt_usn" json:"yt_usn"`
 	Latitude    float64        `db:"latitude" json:"latitude"`
 	Longitude   float64        `db:"longitude" json:"longitude"`
 	Vision      string         `db:"vision" json:"vision"`

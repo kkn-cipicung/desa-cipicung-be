@@ -38,7 +38,8 @@ func (r *repository) Register(ctx context.Context, payload RegisterPayload, role
 
 func (r *repository) FindByUsername(ctx context.Context, username string) (*models.User, error) {
 	query := `
-		SELECT id, COALESCE(role, '') AS role, username, password, COALESCE(is_active, TRUE) AS is_active
+		SELECT id, COALESCE(role, '') AS role, COALESCE(username, '') AS username,
+			COALESCE(password, '') AS password, COALESCE(is_active, TRUE) AS is_active
 		FROM users
 		WHERE username = $1
 	`

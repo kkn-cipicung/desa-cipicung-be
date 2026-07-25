@@ -10,6 +10,9 @@ type AddContactPayload struct {
 	Phone      string `db:"phone" json:"phone"`
 	Email      string `db:"email" json:"email"`
 	Website    string `db:"website" json:"website"`
+	Instagram  string `db:"ig_usn" json:"ig_usn"`
+	TikTok     string `db:"tiktok_usn" json:"tiktok_usn"`
+	YouTube    string `db:"yt_usn" json:"yt_usn"`
 }
 
 type EditContactPayload struct {
@@ -32,6 +35,9 @@ type ContactResponse struct {
 	Phone      string `db:"phone" json:"phone"`
 	Email      string `db:"email" json:"email"`
 	Website    string `db:"website" json:"website"`
+	Instagram  string `db:"ig_usn" json:"ig_usn"`
+	TikTok     string `db:"tiktok_usn" json:"tiktok_usn"`
+	YouTube    string `db:"yt_usn" json:"yt_usn"`
 	IsActive   bool   `db:"is_active" json:"is_active"`
 }
 

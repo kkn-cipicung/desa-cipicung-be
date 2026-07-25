@@ -67,7 +67,11 @@ func (r *repository) List(ctx context.Context, payload ListDashboardPayload) ([]
 	var results []DashboardResponse
 
 	query := `
-		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, COALESCE(m.file_path, '') AS media, g.is_active, g.created_at
+		SELECT g.id, COALESCE(g.created_by, 0) AS created_by, COALESCE(u.name, '') AS creator_name,
+			COALESCE(g.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(g.title, '') AS title, COALESCE(g.description, '') AS description,
+			COALESCE(m.file_path, '') AS media, COALESCE(g.is_active, FALSE) AS is_active,
+			COALESCE(g.created_at, NOW()) AS created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
@@ -87,7 +91,11 @@ func (r *repository) Detail(ctx context.Context) (*DashboardResponse, error) {
 	var result DashboardResponse
 
 	query := `
-		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, COALESCE(m.file_path, '') AS media, g.is_active, g.created_at
+		SELECT g.id, COALESCE(g.created_by, 0) AS created_by, COALESCE(u.name, '') AS creator_name,
+			COALESCE(g.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(g.title, '') AS title, COALESCE(g.description, '') AS description,
+			COALESCE(m.file_path, '') AS media, COALESCE(g.is_active, FALSE) AS is_active,
+			COALESCE(g.created_at, NOW()) AS created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
@@ -110,7 +118,11 @@ func (r *repository) FindActive(ctx context.Context) (*DashboardResponse, error)
 	var result DashboardResponse
 
 	query := `
-		SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, COALESCE(m.file_path, '') AS media, g.is_active, g.created_at
+		SELECT g.id, COALESCE(g.created_by, 0) AS created_by, COALESCE(u.name, '') AS creator_name,
+			COALESCE(g.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(g.title, '') AS title, COALESCE(g.description, '') AS description,
+			COALESCE(m.file_path, '') AS media, COALESCE(g.is_active, FALSE) AS is_active,
+			COALESCE(g.created_at, NOW()) AS created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
 		LEFT JOIN categories c ON g.category_id = c.id
@@ -124,7 +136,11 @@ func (r *repository) FindActive(ctx context.Context) (*DashboardResponse, error)
 		if errors.Is(err, sql.ErrNoRows) {
 			var fallbackResult DashboardResponse
 			fallbackQuery := `
-				SELECT g.id, g.created_by, COALESCE(u.name, '') AS creator_name, g.category_id, COALESCE(c.name, '') AS category_name, g.title, g.description, COALESCE(m.file_path, '') AS media, g.is_active, g.created_at
+				SELECT g.id, COALESCE(g.created_by, 0) AS created_by, COALESCE(u.name, '') AS creator_name,
+					COALESCE(g.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+					COALESCE(g.title, '') AS title, COALESCE(g.description, '') AS description,
+					COALESCE(m.file_path, '') AS media, COALESCE(g.is_active, FALSE) AS is_active,
+					COALESCE(g.created_at, NOW()) AS created_at
 				FROM galleries g
 				LEFT JOIN users u ON g.created_by = u.id
 				LEFT JOIN categories c ON g.category_id = c.id

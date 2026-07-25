@@ -37,7 +37,6 @@ func TestCreateAllowsOptionalLocationID(t *testing.T) {
 		UploadedBy:  1,
 		CategoryID:  2,
 		Title:       "Kerajinan",
-		Slug:        "kerajinan",
 		Description: "Deskripsi",
 		LocationID:  &locationID,
 		Location:    &PotentialLocationInput{ID: &locationID},
@@ -63,7 +62,6 @@ func TestUpdateAcceptsNestedLocationID(t *testing.T) {
 		UploadedBy:  1,
 		CategoryID:  2,
 		Title:       "Kerajinan",
-		Slug:        "kerajinan",
 		Description: "Deskripsi",
 		Location:    &PotentialLocationInput{ID: &locationID},
 	})
@@ -72,5 +70,42 @@ func TestUpdateAcceptsNestedLocationID(t *testing.T) {
 	}
 	if repository.updatePayload.Location == nil || repository.updatePayload.Location.ID == nil || *repository.updatePayload.Location.ID != locationID {
 		t.Fatalf("Location.ID was not preserved")
+	}
+}
+
+func TestCreateGeneratesSlugFromTitle(t *testing.T) {
+	repository := &potentialRepositorySpy{}
+	service := NewService(repository)
+
+	err := service.Create(context.Background(), AddPotentialPayload{
+		UploadedBy:  1,
+		CategoryID:  2,
+		Title:       "  Wisata Alam Cipicung!!  ",
+		Description: "Deskripsi",
+	})
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if repository.createPayload.Slug != "wisata-alam-cipicung" {
+		t.Fatalf("Slug = %q, want %q", repository.createPayload.Slug, "wisata-alam-cipicung")
+	}
+}
+
+func TestUpdateGeneratesSlugFromTitle(t *testing.T) {
+	repository := &potentialRepositorySpy{}
+	service := NewService(repository)
+
+	err := service.Update(context.Background(), EditPotentialPayload{
+		ID:          1,
+		UploadedBy:  1,
+		CategoryID:  2,
+		Title:       "Produk UMKM Desa",
+		Description: "Deskripsi",
+	})
+	if err != nil {
+		t.Fatalf("Update() error = %v", err)
+	}
+	if repository.updatePayload.Slug != "produk-umkm-desa" {
+		t.Fatalf("Slug = %q, want %q", repository.updatePayload.Slug, "produk-umkm-desa")
 	}
 }

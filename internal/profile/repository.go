@@ -100,7 +100,8 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 func (r *repository) FindHeadmen(ctx context.Context, villageID uint) ([]ProfileOfficialOutput, error) {
 	var results []ProfileOfficialOutput
 	query := `
-		SELECT id, name, position, COALESCE(phone, '') AS phone, COALESCE(email, '') AS email,
+		SELECT id, COALESCE(name, '') AS name, COALESCE(position, '') AS position,
+			COALESCE(phone, '') AS phone, COALESCE(email, '') AS email,
 			COALESCE(description, '') AS description, COALESCE(order_number, 0) AS order_number,
 			COALESCE(is_active, false) AS is_active,
 			COALESCE(TO_CHAR(start_date, 'YYYY-MM-DD'), '') AS start_date,
@@ -191,7 +192,8 @@ func (r *repository) FindVisionMission(ctx context.Context) (*ProfileVisionMissi
 func (r *repository) FindGovernmentStructure(ctx context.Context) ([]GovernmentStructureResponse, error) {
 	var results []GovernmentStructureResponse
 	query := `
-		SELECT id, name, position, COALESCE(order_number, 0) AS order_number,
+		SELECT id, COALESCE(name, '') AS name, COALESCE(position, '') AS position,
+			COALESCE(order_number, 0) AS order_number,
 			COALESCE(is_active, false) AS is_active
 		FROM officials
 		WHERE position <> $1
@@ -495,7 +497,8 @@ func (r *repository) CreateOfficial(ctx context.Context, payload AddOfficialPayl
 func (r *repository) ListOfficials(ctx context.Context, payload ListOfficialPayload) ([]OfficialResponse, error) {
 	var results []OfficialResponse
 	query := `
-		SELECT id, village_id, name, position, COALESCE(order_number, 0) AS order_number,
+		SELECT id, COALESCE(village_id, 0) AS village_id, COALESCE(name, '') AS name,
+			COALESCE(position, '') AS position, COALESCE(order_number, 0) AS order_number,
 			COALESCE(is_active, false) AS is_active,
 			COALESCE(TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS created_at,
 			COALESCE(TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS updated_at
@@ -516,7 +519,8 @@ func (r *repository) ListOfficials(ctx context.Context, payload ListOfficialPayl
 func (r *repository) FindOfficialByID(ctx context.Context, payload OfficialPayload) (*OfficialResponse, error) {
 	var result OfficialResponse
 	query := `
-		SELECT id, village_id, name, position, COALESCE(order_number, 0) AS order_number,
+		SELECT id, COALESCE(village_id, 0) AS village_id, COALESCE(name, '') AS name,
+			COALESCE(position, '') AS position, COALESCE(order_number, 0) AS order_number,
 			COALESCE(is_active, false) AS is_active,
 			COALESCE(TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS created_at,
 			COALESCE(TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS updated_at

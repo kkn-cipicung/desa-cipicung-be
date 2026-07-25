@@ -61,7 +61,11 @@ func (r *repository) List(ctx context.Context, payload ListBusinessPayload) ([]m
 	var results []models.Business
 
 	query := `
-		SELECT b.id, b.category_id, COALESCE(c.name, '') AS category_name, b.owner_name, b.business_name, b.description, b.phone, b.address, b.location_id, b.instagram, b.facebook, b.created_at
+		SELECT b.id, COALESCE(b.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(b.owner_name, '') AS owner_name, COALESCE(b.business_name, '') AS business_name,
+			COALESCE(b.description, '') AS description, COALESCE(b.phone, '') AS phone,
+			COALESCE(b.address, '') AS address, b.location_id, b.instagram, b.facebook,
+			COALESCE(b.created_at, NOW()) AS created_at
 		FROM businesses b
 		LEFT JOIN categories c ON b.category_id = c.id
 		WHERE ($3 = '' OR c.slug = $3)
@@ -79,7 +83,11 @@ func (r *repository) FindByID(ctx context.Context, payload BusinessPayload) (*mo
 	var result models.Business
 
 	query := `
-		SELECT b.id, b.category_id, COALESCE(c.name, '') AS category_name, b.owner_name, b.business_name, b.description, b.phone, b.address, b.location_id, b.instagram, b.facebook, b.created_at
+		SELECT b.id, COALESCE(b.category_id, 0) AS category_id, COALESCE(c.name, '') AS category_name,
+			COALESCE(b.owner_name, '') AS owner_name, COALESCE(b.business_name, '') AS business_name,
+			COALESCE(b.description, '') AS description, COALESCE(b.phone, '') AS phone,
+			COALESCE(b.address, '') AS address, b.location_id, b.instagram, b.facebook,
+			COALESCE(b.created_at, NOW()) AS created_at
 		FROM businesses b
 		LEFT JOIN categories c ON b.category_id = c.id
 		WHERE b.id = $1

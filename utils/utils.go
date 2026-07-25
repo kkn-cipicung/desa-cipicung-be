@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,9 +15,9 @@ import (
 )
 
 func GenerateSlug(name string) string {
-	slug := strings.ToLower(name)
-	slug = strings.ReplaceAll(slug, " ", "-")
-	return slug
+	slug := strings.ToLower(strings.TrimSpace(name))
+	slug = regexp.MustCompile(`[^a-z0-9]+`).ReplaceAllString(slug, "-")
+	return strings.Trim(slug, "-")
 }
 
 type MediaPayload struct {
@@ -42,10 +43,14 @@ func PrepareMedia(imgBase64 *string, uploadDir string, uploadedBy uint) (*MediaP
 	if imgBase64 == nil || *imgBase64 == "" {
 		return nil, nil
 	}
+	value := strings.TrimSpace(*imgBase64)
+	if value == "" || isExistingMediaReference(value) {
+		return nil, nil
+	}
 
-	filePath, mimeType, err := file.SaveBase64(*imgBase64, uploadDir)
+	filePath, mimeType, err := file.SaveBase64(value, uploadDir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: invalid media_id", ErrInvalidPayload)
 	}
 
 	media := &MediaPayload{
@@ -58,6 +63,13 @@ func PrepareMedia(imgBase64 *string, uploadDir string, uploadedBy uint) (*MediaP
 	}
 
 	return media, nil
+}
+
+func isExistingMediaReference(value string) bool {
+	return strings.HasPrefix(value, "http://") ||
+		strings.HasPrefix(value, "https://") ||
+		strings.HasPrefix(value, "/") ||
+		strings.HasPrefix(value, "uploads/")
 }
 
 func InsertMedia(ctx context.Context, tx *sqlx.Tx, media *MediaPayload) (*uint, error) {

@@ -193,7 +193,7 @@ func (r *repository) FindHeader(ctx context.Context, payload NewsByIdPayload) (N
 	var result NewsHeaderResponse
 
 	query := `
-		SELECT d.id, d.title
+		SELECT d.id, COALESCE(d.title, '') AS title
 		FROM documents d
 		WHERE d.id = $1
 	`

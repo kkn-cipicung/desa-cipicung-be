@@ -7,7 +7,7 @@ type AddPotentialPayload struct {
 	CategoryID  uint                    `db:"category_id" json:"category_id" binding:"required"`
 	Title       string                  `db:"title" json:"title" binding:"required"`
 	Subtitle    string                  `db:"subtitle" json:"subtitle"`
-	Slug        string                  `db:"slug" json:"slug" binding:"required"`
+	Slug        string                  `db:"slug" json:"slug"`
 	Description string                  `db:"description" json:"description" binding:"required"`
 	LocationID  *uint                   `db:"location_id" json:"location_id"`
 	Location    *PotentialLocationInput `json:"location"`
@@ -22,7 +22,7 @@ type EditPotentialPayload struct {
 	CategoryID  uint                    `db:"category_id" json:"category_id" binding:"required"`
 	Title       string                  `db:"title" json:"title" binding:"required"`
 	Subtitle    string                  `db:"subtitle" json:"subtitle"`
-	Slug        string                  `db:"slug" json:"slug" binding:"required"`
+	Slug        string                  `db:"slug" json:"slug"`
 	Description string                  `db:"description" json:"description" binding:"required"`
 	LocationID  *uint                   `db:"location_id" json:"location_id"`
 	Location    *PotentialLocationInput `json:"location"`
