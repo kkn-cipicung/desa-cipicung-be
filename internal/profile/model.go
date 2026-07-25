@@ -26,6 +26,12 @@ type AddProfilePayload struct {
 	Region            string                    `db:"region" json:"region"`
 	HamletOne         int64                     `db:"hamlet_one" json:"hamlet_one"`
 	HamletTwo         int64                     `db:"hamlet_two" json:"hamlet_two"`
+	TotalRT           int64                     `db:"total_rt" json:"total_rt"`
+	TotalRW           int64                     `db:"total_rw" json:"total_rw"`
+	RTHamletOne       int64                     `db:"rt_hamlet_one" json:"rt_hamlet_one"`
+	RTHamletTwo       int64                     `db:"rt_hamlet_two" json:"rt_hamlet_two"`
+	RWHamletOne       int64                     `db:"rw_hamlet_one" json:"rw_hamlet_one"`
+	RWHamletTwo       int64                     `db:"rw_hamlet_two" json:"rw_hamlet_two"`
 	NorthBorder       string                    `db:"north_border" json:"north_border"`
 	EastBorder        string                    `db:"east_border" json:"east_border"`
 	SouthBorder       string                    `db:"south_border" json:"south_border"`
@@ -66,6 +72,13 @@ type ProfileResponse struct {
 	Region             string         `db:"region" json:"region"`
 	HamletOne          int64          `db:"hamlet_one" json:"hamlet_one"`
 	HamletTwo          int64          `db:"hamlet_two" json:"hamlet_two"`
+	TotalFamily        int64          `db:"total_family" json:"total_family"`
+	TotalRT            int64          `db:"total_rt" json:"total_rt"`
+	TotalRW            int64          `db:"total_rw" json:"total_rw"`
+	RTHamletOne        int64          `db:"rt_hamlet_one" json:"rt_hamlet_one"`
+	RTHamletTwo        int64          `db:"rt_hamlet_two" json:"rt_hamlet_two"`
+	RWHamletOne        int64          `db:"rw_hamlet_one" json:"rw_hamlet_one"`
+	RWHamletTwo        int64          `db:"rw_hamlet_two" json:"rw_hamlet_two"`
 	NorthBorder        string         `db:"north_border" json:"north_border"`
 	EastBorder         string         `db:"east_border" json:"east_border"`
 	SouthBorder        string         `db:"south_border" json:"south_border"`
@@ -107,6 +120,13 @@ type ProfileOutput struct {
 	Region      string                  `json:"region"`
 	HamletOne   int64                   `json:"hamlet_one"`
 	HamletTwo   int64                   `json:"hamlet_two"`
+	TotalFamily int64                   `json:"total_family"`
+	TotalRT     int64                   `json:"total_rt"`
+	TotalRW     int64                   `json:"total_rw"`
+	RTHamletOne int64                   `json:"rt_hamlet_one"`
+	RTHamletTwo int64                   `json:"rt_hamlet_two"`
+	RWHamletOne int64                   `json:"rw_hamlet_one"`
+	RWHamletTwo int64                   `json:"rw_hamlet_two"`
 	NorthBorder string                  `json:"north_border"`
 	EastBorder  string                  `json:"east_border"`
 	SouthBorder string                  `json:"south_border"`
@@ -149,6 +169,13 @@ type ProfileRegionBoundaryResponse struct {
 	Region      string `db:"region" json:"region"`
 	HamletOne   int64  `db:"hamlet_one" json:"hamlet_one"`
 	HamletTwo   int64  `db:"hamlet_two" json:"hamlet_two"`
+	TotalFamily int64  `db:"total_family" json:"total_family"`
+	TotalRT     int64  `db:"total_rt" json:"total_rt"`
+	TotalRW     int64  `db:"total_rw" json:"total_rw"`
+	RTHamletOne int64  `db:"rt_hamlet_one" json:"rt_hamlet_one"`
+	RTHamletTwo int64  `db:"rt_hamlet_two" json:"rt_hamlet_two"`
+	RWHamletOne int64  `db:"rw_hamlet_one" json:"rw_hamlet_one"`
+	RWHamletTwo int64  `db:"rw_hamlet_two" json:"rw_hamlet_two"`
 	NorthBorder string `db:"north_border" json:"north_border"`
 	EastBorder  string `db:"east_border" json:"east_border"`
 	SouthBorder string `db:"south_border" json:"south_border"`

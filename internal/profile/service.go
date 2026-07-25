@@ -64,7 +64,6 @@ func (s *service) Detail(ctx context.Context) (*ProfileOutput, error) {
 	return &output, nil
 }
 
-
 func (s *service) FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error) {
 	return s.repository.FindRegionBoundary(ctx)
 }
@@ -117,6 +116,12 @@ func normalizeProfilePayload(payload *AddProfilePayload) {
 	payload.SouthBorder = strings.TrimSpace(payload.SouthBorder)
 	payload.WestBorder = strings.TrimSpace(payload.WestBorder)
 	payload.Area = strings.TrimSpace(payload.Area)
+	if payload.RTHamletOne+payload.RTHamletTwo > 0 {
+		payload.TotalRT = payload.RTHamletOne + payload.RTHamletTwo
+	}
+	if payload.RWHamletOne+payload.RWHamletTwo > 0 {
+		payload.TotalRW = payload.RWHamletOne + payload.RWHamletTwo
+	}
 	payload.Population = calculateProfilePopulation(payload.HamletOne, payload.HamletTwo)
 	if payload.Headman != nil {
 		normalizeHeadmanPayload(payload.Headman)
@@ -155,6 +160,24 @@ func validateProfilePayload(payload AddProfilePayload) error {
 	}
 	if payload.HamletTwo < 0 {
 		return fmt.Errorf("%w: hamlet_two cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.TotalRT < 0 {
+		return fmt.Errorf("%w: total_rt cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.TotalRW < 0 {
+		return fmt.Errorf("%w: total_rw cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.RTHamletOne < 0 {
+		return fmt.Errorf("%w: rt_hamlet_one cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.RTHamletTwo < 0 {
+		return fmt.Errorf("%w: rt_hamlet_two cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.RWHamletOne < 0 {
+		return fmt.Errorf("%w: rw_hamlet_one cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.RWHamletTwo < 0 {
+		return fmt.Errorf("%w: rw_hamlet_two cannot be negative", utils.ErrInvalidPayload)
 	}
 	if payload.Headman != nil {
 		if err := validateHeadmanPayload(*payload.Headman); err != nil {
@@ -315,6 +338,13 @@ func mapProfileOutput(item ProfileResponse) ProfileOutput {
 		Region:      item.Region,
 		HamletOne:   item.HamletOne,
 		HamletTwo:   item.HamletTwo,
+		TotalFamily: item.TotalFamily,
+		TotalRT:     item.TotalRT,
+		TotalRW:     item.TotalRW,
+		RTHamletOne: item.RTHamletOne,
+		RTHamletTwo: item.RTHamletTwo,
+		RWHamletOne: item.RWHamletOne,
+		RWHamletTwo: item.RWHamletTwo,
 		NorthBorder: item.NorthBorder,
 		EastBorder:  item.EastBorder,
 		SouthBorder: item.SouthBorder,

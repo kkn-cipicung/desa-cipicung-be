@@ -51,13 +51,14 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 		INSERT INTO villages (
 			name, province, regency, district, postal_code, address, phone, email, website,
 			latitude, longitude, vision, mission, history, description, region, hamlet_one,
-			hamlet_two, north_border, east_border, south_border, west_border, area, population,
+			hamlet_two, total_rt, total_rw, rt_hamlet_one, rt_hamlet_two, rw_hamlet_one,
+			rw_hamlet_two, north_border, east_border, south_border, west_border, area, population,
 			created_at, updated_at
 		)
 		VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9,
 			$10, $11, $12, $13, $14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23, $24,
+			$19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
 			CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 		)
 		RETURNING id
@@ -67,8 +68,10 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 		payload.Name, payload.Province, payload.Regency, payload.District, payload.PostalCode,
 		payload.Address, payload.Phone, payload.Email, payload.Website, payload.Latitude,
 		payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History, payload.Description,
-		payload.Region, payload.HamletOne, payload.HamletTwo, payload.NorthBorder,
-		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area, payload.Population,
+		payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalRT, payload.TotalRW,
+		payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne, payload.RWHamletTwo,
+		payload.NorthBorder, payload.EastBorder, payload.SouthBorder, payload.WestBorder,
+		payload.Area, payload.Population,
 	).Scan(&villageID); err != nil {
 		return err
 	}
@@ -140,7 +143,18 @@ func (r *repository) FindRegionBoundary(ctx context.Context) (*ProfileRegionBoun
 	var result ProfileRegionBoundaryResponse
 	query := `
 		SELECT COALESCE(region, '') AS region, COALESCE(hamlet_one, 0) AS hamlet_one,
-			COALESCE(hamlet_two, 0) AS hamlet_two, COALESCE(north_border, '') AS north_border,
+			COALESCE(hamlet_two, 0) AS hamlet_two, COALESCE(total_family, 0) AS total_family,
+			COALESCE(rt_hamlet_one, 0) AS rt_hamlet_one, COALESCE(rt_hamlet_two, 0) AS rt_hamlet_two,
+			COALESCE(rw_hamlet_one, 0) AS rw_hamlet_one, COALESCE(rw_hamlet_two, 0) AS rw_hamlet_two,
+			CASE
+				WHEN COALESCE(rt_hamlet_one, 0) + COALESCE(rt_hamlet_two, 0) > 0 THEN COALESCE(rt_hamlet_one, 0) + COALESCE(rt_hamlet_two, 0)
+				ELSE COALESCE(total_rt, 0)
+			END AS total_rt,
+			CASE
+				WHEN COALESCE(rw_hamlet_one, 0) + COALESCE(rw_hamlet_two, 0) > 0 THEN COALESCE(rw_hamlet_one, 0) + COALESCE(rw_hamlet_two, 0)
+				ELSE COALESCE(total_rw, 0)
+			END AS total_rw,
+			COALESCE(north_border, '') AS north_border,
 			COALESCE(east_border, '') AS east_border, COALESCE(south_border, '') AS south_border,
 			COALESCE(west_border, '') AS west_border, COALESCE(area, '') AS area,
 			COALESCE(population, '') AS population
@@ -237,12 +251,18 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 			region = $17,
 			hamlet_one = $18,
 			hamlet_two = $19,
-			north_border = $20,
-			east_border = $21,
-			south_border = $22,
-			west_border = $23,
-			area = $24,
-			population = $25,
+			total_rt = $20,
+			total_rw = $21,
+			rt_hamlet_one = $22,
+			rt_hamlet_two = $23,
+			rw_hamlet_one = $24,
+			rw_hamlet_two = $25,
+			north_border = $26,
+			east_border = $27,
+			south_border = $28,
+			west_border = $29,
+			area = $30,
+			population = $31,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
@@ -250,8 +270,10 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 		payload.ID, payload.Name, payload.Province, payload.Regency, payload.District,
 		payload.PostalCode, payload.Address, payload.Phone, payload.Email, payload.Website,
 		payload.Latitude, payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History,
-		payload.Description, payload.Region, payload.HamletOne, payload.HamletTwo, payload.NorthBorder,
-		payload.EastBorder, payload.SouthBorder, payload.WestBorder, payload.Area, payload.Population,
+		payload.Description, payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalRT,
+		payload.TotalRW, payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne,
+		payload.RWHamletTwo, payload.NorthBorder, payload.EastBorder, payload.SouthBorder, payload.WestBorder,
+		payload.Area, payload.Population,
 	)
 	if err != nil {
 		return err
@@ -336,6 +358,19 @@ func profileSelectQuery() string {
 			COALESCE(v.region, '') AS region,
 			COALESCE(v.hamlet_one, 0) AS hamlet_one,
 			COALESCE(v.hamlet_two, 0) AS hamlet_two,
+			COALESCE(v.total_family, 0) AS total_family,
+			COALESCE(v.rt_hamlet_one, 0) AS rt_hamlet_one,
+			COALESCE(v.rt_hamlet_two, 0) AS rt_hamlet_two,
+			COALESCE(v.rw_hamlet_one, 0) AS rw_hamlet_one,
+			COALESCE(v.rw_hamlet_two, 0) AS rw_hamlet_two,
+			CASE
+				WHEN COALESCE(v.rt_hamlet_one, 0) + COALESCE(v.rt_hamlet_two, 0) > 0 THEN COALESCE(v.rt_hamlet_one, 0) + COALESCE(v.rt_hamlet_two, 0)
+				ELSE COALESCE(v.total_rt, 0)
+			END AS total_rt,
+			CASE
+				WHEN COALESCE(v.rw_hamlet_one, 0) + COALESCE(v.rw_hamlet_two, 0) > 0 THEN COALESCE(v.rw_hamlet_one, 0) + COALESCE(v.rw_hamlet_two, 0)
+				ELSE COALESCE(v.total_rw, 0)
+			END AS total_rw,
 			COALESCE(v.north_border, '') AS north_border,
 			COALESCE(v.east_border, '') AS east_border, COALESCE(v.south_border, '') AS south_border,
 			COALESCE(v.west_border, '') AS west_border, COALESCE(v.area, '') AS area,
