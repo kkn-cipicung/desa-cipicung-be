@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 
 	"cipicung.id/be/utils"
 	"github.com/jmoiron/sqlx"
@@ -149,19 +148,19 @@ func (r *repository) FindOverview(ctx context.Context) (*DashboardOverviewOutput
 
 	query := `
 		SELECT 
-			COALESCE((SELECT title FROM villages WHERE is_active = TRUE AND title <> '' ORDER BY id DESC LIMIT 1), (SELECT title FROM villages WHERE title <> '' ORDER BY id DESC LIMIT 1), '') AS title,
-			COALESCE((SELECT description FROM villages WHERE is_active = TRUE AND description <> '' ORDER BY id DESC LIMIT 1), (SELECT description FROM villages WHERE description <> '' ORDER BY id DESC LIMIT 1), '') AS description,
-			COALESCE((SELECT m.file_path FROM villages v JOIN media m ON v.id = m.entity_id AND m.entity_type = 'village' WHERE v.is_active = TRUE ORDER BY v.id DESC LIMIT 1), (SELECT m.file_path FROM villages v JOIN media m ON v.id = m.entity_id AND m.entity_type = 'village' ORDER BY v.id DESC LIMIT 1), '') AS media,
-			COALESCE((SELECT area FROM villages WHERE is_active = TRUE AND area <> '' ORDER BY id DESC LIMIT 1), (SELECT area FROM villages WHERE area <> '' ORDER BY id DESC LIMIT 1), '') AS area,
-			COALESCE((SELECT CAST(NULLIF(population, '') AS BIGINT) FROM villages WHERE is_active = TRUE AND population <> '' ORDER BY id DESC LIMIT 1), (SELECT total_population FROM villages WHERE is_active = TRUE ORDER BY id DESC LIMIT 1), (SELECT CAST(NULLIF(population, '') AS BIGINT) FROM villages WHERE population <> '' ORDER BY id DESC LIMIT 1), 0) AS population,
-			COALESCE((SELECT total_family FROM villages WHERE is_active = TRUE ORDER BY id DESC LIMIT 1), (SELECT total_family FROM villages ORDER BY id DESC LIMIT 1), 0) AS total_family,
-			COALESCE((SELECT CASE WHEN hamlet_one IS NOT NULL AND hamlet_two IS NOT NULL THEN 2 ELSE 1 END FROM villages WHERE is_active = TRUE ORDER BY id DESC LIMIT 1), (SELECT CASE WHEN hamlet_one IS NOT NULL AND hamlet_two IS NOT NULL THEN 2 ELSE 1 END FROM villages ORDER BY id DESC LIMIT 1), 0) AS total_hamlet,
-			COALESCE((SELECT COUNT(*) FROM news), 0) AS total_news,
+			COALESCE((SELECT title FROM villages WHERE title <> '' ORDER BY id DESC LIMIT 1), '') AS title,
+			COALESCE((SELECT description FROM villages WHERE description <> '' ORDER BY id DESC LIMIT 1), '') AS description,
+			COALESCE((SELECT m.file_path FROM villages v JOIN media m ON v.id = m.entity_id AND m.entity_type = 'village' ORDER BY v.id DESC LIMIT 1), '') AS media,
+			COALESCE((SELECT area FROM villages WHERE area <> '' ORDER BY id DESC LIMIT 1), '') AS area,
+			COALESCE((SELECT CAST(NULLIF(population, '') AS BIGINT) FROM villages WHERE population <> '' ORDER BY id DESC LIMIT 1), (SELECT total_population FROM villages ORDER BY id DESC LIMIT 1), 0) AS population,
+			COALESCE((SELECT total_family FROM villages ORDER BY id DESC LIMIT 1), 0) AS total_family,
+			COALESCE((SELECT CASE WHEN hamlet_one IS NOT NULL AND hamlet_two IS NOT NULL THEN 2 ELSE 1 END FROM villages ORDER BY id DESC LIMIT 1), 0) AS total_hamlet,
+			COALESCE((SELECT COUNT(*) FROM documents), 0) AS total_news,
 			COALESCE((SELECT COUNT(*) FROM potentials), 0) AS total_potential
 	`
 
 	if err := r.db.GetContext(ctx, &result, query); err != nil {
-		return &DashboardOverviewOutput{}, nil
+		return nil, err
 	}
 
 	return &result, nil
@@ -174,47 +173,70 @@ func (r *repository) CreateOverview(ctx context.Context, payload AddDashboardOve
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = FALSE WHERE is_active = TRUE`); err != nil {
-		return nil, err
-	}
-
-	var hamletOne, hamletTwo *string
-	if payload.TotalHamlet >= 1 {
-		h1 := "Dusun I"
-		hamletOne = &h1
-	}
-	if payload.TotalHamlet >= 2 {
-		h2 := "Dusun II"
-		hamletTwo = &h2
-	}
-
-	populationStr := fmt.Sprintf("%d", payload.Population)
-
-	query := `
-		INSERT INTO villages (
-			name, title, description, area, population, total_population, total_family,
-			hamlet_one, hamlet_two, is_active, created_at, updated_at
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-		)
-		RETURNING id
-	`
+	var existingID uint
+	_ = tx.GetContext(ctx, &existingID, `SELECT id FROM villages ORDER BY id ASC LIMIT 1`)
 
 	var villageID uint
-	if err := tx.QueryRowContext(ctx, query,
-		payload.Title, payload.Title, payload.Description, payload.Area,
-		populationStr, payload.Population, payload.TotalFamily,
-		hamletOne, hamletTwo,
-	).Scan(&villageID); err != nil {
-		return nil, err
-	}
+	var oldMedia *utils.ReplacedMediaPayload
 
-	if _, err := utils.AttachMediaToEntity(ctx, tx, media, "village", villageID, "image"); err != nil {
-		return nil, err
+	if existingID > 0 {
+		villageID = existingID
+		updateQuery := `
+			UPDATE villages
+			SET title = $1,
+				description = $2,
+				area = $3,
+				total_family = $4,
+				population = CASE WHEN $5 > 0 THEN $5::text ELSE population END,
+				total_population = CASE WHEN $5 > 0 THEN $5 ELSE total_population END,
+				updated_at = CURRENT_TIMESTAMP
+			WHERE id = $6
+		`
+		if _, err := tx.ExecContext(ctx, updateQuery,
+			payload.Title, payload.Description, payload.Area, payload.TotalFamily, payload.Population, villageID,
+		); err != nil {
+			return nil, err
+		}
+
+		if media != nil {
+			var oldMediaFilePath string
+			_ = tx.GetContext(ctx, &oldMediaFilePath, `
+				SELECT file_path FROM media WHERE entity_type = 'village' AND entity_id = $1 ORDER BY id DESC LIMIT 1
+			`, villageID)
+			if oldMediaFilePath != "" {
+				oldMedia = &utils.ReplacedMediaPayload{FilePath: oldMediaFilePath}
+				_, _ = tx.ExecContext(ctx, `DELETE FROM media WHERE entity_type = 'village' AND entity_id = $1`, villageID)
+			}
+			if _, err := utils.AttachMediaToEntity(ctx, tx, media, "village", villageID, "image"); err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		insertQuery := `
+			INSERT INTO villages (
+				name, title, description, area, total_family, population, total_population, is_active, created_at, updated_at
+			) VALUES (
+				$1, $1, $2, $3, $4, $5::text, $5, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+			)
+			RETURNING id
+		`
+		if err := tx.QueryRowContext(ctx, insertQuery,
+			payload.Title, payload.Description, payload.Area, payload.TotalFamily, payload.Population,
+		).Scan(&villageID); err != nil {
+			return nil, err
+		}
+
+		if _, err := utils.AttachMediaToEntity(ctx, tx, media, "village", villageID, "image"); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
+	}
+
+	if oldMedia != nil {
+		_ = utils.RemoveMediaFile(oldMedia)
 	}
 
 	return r.FindOverview(ctx)

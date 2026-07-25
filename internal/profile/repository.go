@@ -17,7 +17,6 @@ const headmanPosition = "kepala-desa"
 type Repository interface {
 	Create(ctx context.Context, payload AddProfilePayload) error
 	Detail(ctx context.Context) (*ProfileResponse, error)
-	FindActive(ctx context.Context) (*ProfileResponse, error)
 	FindFirst(ctx context.Context) (*ProfileResponse, error)
 	FindHeadmen(ctx context.Context, villageID uint) ([]ProfileOfficialOutput, error)
 	FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error)
@@ -25,7 +24,6 @@ type Repository interface {
 	FindGovernmentStructure(ctx context.Context) ([]GovernmentStructureResponse, error)
 	FindResourcePotential(ctx context.Context) (ResourcePotentialResponse, error)
 	Update(ctx context.Context, payload EditProfilePayload) error
-	Activate(ctx context.Context, payload ProfilePayload) error
 	Delete(ctx context.Context, payload ProfilePayload) error
 	CreateOfficial(ctx context.Context, payload AddOfficialPayload) error
 	ListOfficials(ctx context.Context, payload ListOfficialPayload) ([]OfficialResponse, error)
@@ -117,61 +115,19 @@ func (r *repository) FindHeadmen(ctx context.Context, villageID uint) ([]Profile
 func (r *repository) Detail(ctx context.Context) (*ProfileResponse, error) {
 	var result ProfileResponse
 	query := profileSelectQuery() + ` ORDER BY v.id ASC LIMIT 1 `
-	if err := r.db.GetContext(ctx, &result, query, headmanPosition); err != nil {
+	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return &ProfileResponse{Mission: []string{}}, nil
 		}
 		return nil, err
 	}
 	return &result, nil
-}
-
-func (r *repository) FindActive(ctx context.Context) (*ProfileResponse, error) {
-	var result ProfileResponse
-	query := profileSelectQuery() + ` WHERE v.is_active = TRUE ORDER BY v.id DESC LIMIT 1 `
-	if err := r.db.GetContext(ctx, &result, query, headmanPosition); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			var fallbackResult ProfileResponse
-			fallbackQuery := profileSelectQuery() + ` ORDER BY v.id ASC LIMIT 1 `
-			if fallbackErr := r.db.GetContext(ctx, &fallbackResult, fallbackQuery, headmanPosition); fallbackErr == nil {
-				return &fallbackResult, nil
-			}
-			return &ProfileResponse{Mission: []string{}}, nil
-		}
-		return nil, err
-	}
-	return &result, nil
-}
-
-func (r *repository) Activate(ctx context.Context, payload ProfilePayload) error {
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	var exists bool
-	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM villages WHERE id = $1)`, payload.ID); err != nil {
-		return err
-	}
-	if !exists {
-		return ErrProfileNotFound
-	}
-
-	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = FALSE WHERE id <> $1 AND is_active = TRUE`, payload.ID); err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, payload.ID); err != nil {
-		return err
-	}
-
-	return tx.Commit()
 }
 
 func (r *repository) FindFirst(ctx context.Context) (*ProfileResponse, error) {
 	var result ProfileResponse
 	query := profileSelectQuery() + ` ORDER BY v.id ASC LIMIT 1 `
-	if err := r.db.GetContext(ctx, &result, query, headmanPosition); err != nil {
+	if err := r.db.GetContext(ctx, &result, query); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrProfileNotFound
 		}
@@ -221,11 +177,8 @@ func (r *repository) FindVisionMission(ctx context.Context) (*ProfileVisionMissi
 func (r *repository) FindGovernmentStructure(ctx context.Context) ([]GovernmentStructureResponse, error) {
 	var results []GovernmentStructureResponse
 	query := `
-		SELECT id, name, position, COALESCE(phone, '') AS phone, COALESCE(email, '') AS email,
-			COALESCE(description, '') AS description, COALESCE(order_number, 0) AS order_number,
-			COALESCE(is_active, false) AS is_active,
-			CASE WHEN start_date IS NULL THEN NULL ELSE TO_CHAR(start_date, 'YYYY-MM-DD') END AS start_date,
-			CASE WHEN finish_date IS NULL THEN NULL ELSE TO_CHAR(finish_date, 'YYYY-MM-DD') END AS finish_date
+		SELECT id, name, position, COALESCE(order_number, 0) AS order_number,
+			COALESCE(is_active, false) AS is_active
 		FROM officials
 		WHERE position <> $1
 		ORDER BY order_number ASC, id ASC
@@ -369,19 +322,27 @@ func (r *repository) Delete(ctx context.Context, payload ProfilePayload) error {
 
 func profileSelectQuery() string {
 	return `
-		SELECT v.id, v.name, v.province, v.regency, v.district, v.postal_code, v.address,
+		SELECT v.id, COALESCE(v.name, '') AS name,
+			COALESCE(v.province, '') AS province,
+			COALESCE(v.regency, '') AS regency,
+			COALESCE(v.district, '') AS district,
+			COALESCE(v.postal_code, '') AS postal_code,
+			COALESCE(v.address, '') AS address,
 			COALESCE(v.phone, '') AS phone, COALESCE(v.email, '') AS email, COALESCE(v.website, '') AS website,
 			COALESCE(v.latitude, 0) AS latitude,
 			COALESCE(v.longitude, 0) AS longitude, COALESCE(v.vision, '') AS vision,
 			COALESCE(v.mission, ARRAY[]::varchar[]) AS mission,
 			COALESCE(v.history, '') AS history, COALESCE(v.description, '') AS description,
-			COALESCE(v.region, '') AS region, COALESCE(v.hamlet_one, 0) AS hamlet_one,
-			COALESCE(v.hamlet_two, 0) AS hamlet_two, COALESCE(v.north_border, '') AS north_border,
+			COALESCE(v.region, '') AS region,
+			COALESCE(v.hamlet_one, 0) AS hamlet_one,
+			COALESCE(v.hamlet_two, 0) AS hamlet_two,
+			COALESCE(v.north_border, '') AS north_border,
 			COALESCE(v.east_border, '') AS east_border, COALESCE(v.south_border, '') AS south_border,
 			COALESCE(v.west_border, '') AS west_border, COALESCE(v.area, '') AS area,
 			COALESCE(v.population, '') AS population,
 			COALESCE(v.is_active, FALSE) AS is_active,
-			v.created_at, v.updated_at,
+			COALESCE(v.created_at, NOW()) AS created_at,
+			COALESCE(v.updated_at, NOW()) AS updated_at,
 			COALESCE(o.id, 0) AS headman_id,
 			COALESCE(o.name, '') AS headman_name,
 			COALESCE(o.position, '') AS headman_position,
@@ -394,7 +355,7 @@ func profileSelectQuery() string {
 		FROM villages v
 		LEFT JOIN LATERAL (
 			SELECT * FROM officials
-			WHERE village_id = v.id AND position = $1
+			WHERE village_id = v.id AND (position = 'kepala-desa' OR position = 'kepala desa')
 			ORDER BY is_active DESC, finish_date DESC NULLS FIRST, start_date DESC NULLS LAST, id DESC
 			LIMIT 1
 		) o ON TRUE
@@ -450,14 +411,12 @@ func upsertHeadman(ctx context.Context, tx *sqlx.Tx, villageID uint, headman *Pr
 func insertGovernmentOfficials(ctx context.Context, tx *sqlx.Tx, villageID uint, officials []GovernmentOfficialInput) error {
 	query := `
 		INSERT INTO officials (
-			village_id, name, position, phone, email, description, order_number, is_active,
-			start_date, finish_date, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			village_id, name, position, order_number, is_active, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	for _, official := range officials {
 		if _, err := tx.ExecContext(ctx, query, villageID, official.Name, official.Position,
-			official.Phone, official.Email, official.Description, official.OrderNumber,
-			official.IsActive, official.StartDate, official.FinishDate); err != nil {
+			official.OrderNumber, official.IsActive); err != nil {
 			return err
 		}
 	}
@@ -489,13 +448,11 @@ func (r *repository) CreateOfficial(ctx context.Context, payload AddOfficialPayl
 
 	query := `
 		INSERT INTO officials (
-			village_id, name, position, phone, email, description, order_number, is_active,
-			start_date, finish_date, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			village_id, name, position, order_number, is_active, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err := r.db.ExecContext(ctx, query,
-		villageID, payload.Name, payload.Position, payload.Phone, payload.Email,
-		payload.Description, payload.OrderNumber, payload.IsActive, payload.StartDate, payload.FinishDate,
+		villageID, payload.Name, payload.Position, payload.OrderNumber, payload.IsActive,
 	)
 	return err
 }
@@ -503,19 +460,16 @@ func (r *repository) CreateOfficial(ctx context.Context, payload AddOfficialPayl
 func (r *repository) ListOfficials(ctx context.Context, payload ListOfficialPayload) ([]OfficialResponse, error) {
 	var results []OfficialResponse
 	query := `
-		SELECT id, village_id, name, position, COALESCE(phone, '') AS phone, COALESCE(email, '') AS email,
-			COALESCE(description, '') AS description, COALESCE(order_number, 0) AS order_number,
+		SELECT id, village_id, name, position, COALESCE(order_number, 0) AS order_number,
 			COALESCE(is_active, false) AS is_active,
-			CASE WHEN start_date IS NULL THEN NULL ELSE TO_CHAR(start_date, 'YYYY-MM-DD') END AS start_date,
-			CASE WHEN finish_date IS NULL THEN NULL ELSE TO_CHAR(finish_date, 'YYYY-MM-DD') END AS finish_date,
 			COALESCE(TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS created_at,
 			COALESCE(TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS updated_at
 		FROM officials
-		WHERE ($3 = 0 OR village_id = $3)
+		WHERE ($3 = 0 OR village_id = $3) AND position <> $4
 		ORDER BY order_number ASC, id ASC
 		LIMIT $1 OFFSET $2
 	`
-	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index, payload.VillageID); err != nil {
+	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index, payload.VillageID, headmanPosition); err != nil {
 		return nil, err
 	}
 	if results == nil {
@@ -527,11 +481,8 @@ func (r *repository) ListOfficials(ctx context.Context, payload ListOfficialPayl
 func (r *repository) FindOfficialByID(ctx context.Context, payload OfficialPayload) (*OfficialResponse, error) {
 	var result OfficialResponse
 	query := `
-		SELECT id, village_id, name, position, COALESCE(phone, '') AS phone, COALESCE(email, '') AS email,
-			COALESCE(description, '') AS description, COALESCE(order_number, 0) AS order_number,
+		SELECT id, village_id, name, position, COALESCE(order_number, 0) AS order_number,
 			COALESCE(is_active, false) AS is_active,
-			CASE WHEN start_date IS NULL THEN NULL ELSE TO_CHAR(start_date, 'YYYY-MM-DD') END AS start_date,
-			CASE WHEN finish_date IS NULL THEN NULL ELSE TO_CHAR(finish_date, 'YYYY-MM-DD') END AS finish_date,
 			COALESCE(TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS created_at,
 			COALESCE(TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS updated_at
 		FROM officials
@@ -551,19 +502,13 @@ func (r *repository) UpdateOfficial(ctx context.Context, payload EditOfficialPay
 		UPDATE officials
 		SET name = $2,
 			position = $3,
-			phone = $4,
-			email = $5,
-			description = $6,
-			order_number = $7,
-			is_active = $8,
-			start_date = $9,
-			finish_date = $10,
+			order_number = $4,
+			is_active = $5,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
 	result, err := r.db.ExecContext(ctx, query,
-		payload.ID, payload.Name, payload.Position, payload.Phone, payload.Email,
-		payload.Description, payload.OrderNumber, payload.IsActive, payload.StartDate, payload.FinishDate,
+		payload.ID, payload.Name, payload.Position, payload.OrderNumber, payload.IsActive,
 	)
 	if err != nil {
 		return err

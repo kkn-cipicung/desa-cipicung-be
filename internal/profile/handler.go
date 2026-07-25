@@ -41,35 +41,6 @@ func (h *Handler) Detail(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Profile retrieved successfully", profile)
 }
 
-func (h *Handler) FindActive(c *gin.Context) {
-	profile, err := h.service.FindActive(c.Request.Context())
-	if err != nil {
-		handleProfileError(c, err, "Failed to get active profile")
-		return
-	}
-
-	utils.SuccessResponse(c, http.StatusOK, "Active profile retrieved successfully", profile)
-}
-
-func (h *Handler) Activate(c *gin.Context) {
-	var payload ProfilePayload
-	if err := c.ShouldBindJSON(&payload); err != nil {
-		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid request payload", err)
-		return
-	}
-
-	if payload.ID == 0 {
-		utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid profile ID", nil)
-		return
-	}
-
-	if err := h.service.Activate(c.Request.Context(), payload); err != nil {
-		handleProfileError(c, err, "Failed to activate profile")
-		return
-	}
-
-	utils.SuccessResponse(c, http.StatusOK, "Profile activated successfully", nil)
-}
 
 func (h *Handler) FindRegionBoundary(c *gin.Context) {
 	profile, err := h.service.FindRegionBoundary(c.Request.Context())

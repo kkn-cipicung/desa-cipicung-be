@@ -100,13 +100,12 @@ func (h *Handler) CreateOverview(c *gin.Context) {
 	}
 	payload.CreatedBy = userID
 
-	overview, err := h.service.CreateOverview(c.Request.Context(), payload)
-	if err != nil {
+	if _, err := h.service.CreateOverview(c.Request.Context(), payload); err != nil {
 		handleDashboardError(c, err, "Failed to create dashboard overview")
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, "Overview created successfully", overview)
+	utils.SuccessResponse(c, http.StatusCreated, "Overview created successfully", nil)
 }
 
 func (h *Handler) Update(c *gin.Context) {

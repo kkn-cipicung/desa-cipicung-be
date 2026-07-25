@@ -13,12 +13,10 @@ import (
 type Service interface {
 	Create(ctx context.Context, payload AddProfilePayload) error
 	Detail(ctx context.Context) (*ProfileOutput, error)
-	FindActive(ctx context.Context) (*ProfileOutput, error)
 	FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error)
 	FindVisionMission(ctx context.Context) (*ProfileVisionMissionOutput, error)
 	FindGovernmentStructure(ctx context.Context) ([]GovernmentStructureResponse, error)
 	FindResourcePotential(ctx context.Context) (ResourcePotentialResponse, error)
-	Activate(ctx context.Context, payload ProfilePayload) error
 	Delete(ctx context.Context, payload ProfilePayload) error
 	CreateOfficial(ctx context.Context, payload AddOfficialPayload) error
 	ListOfficials(ctx context.Context, payload ListOfficialPayload) ([]OfficialResponse, error)
@@ -66,27 +64,6 @@ func (s *service) Detail(ctx context.Context) (*ProfileOutput, error) {
 	return &output, nil
 }
 
-func (s *service) FindActive(ctx context.Context) (*ProfileOutput, error) {
-	item, err := s.repository.FindActive(ctx)
-	if err != nil {
-		return nil, err
-	}
-	output := mapProfileOutput(*item)
-	if item.ID != 0 {
-		headmen, err := s.repository.FindHeadmen(ctx, item.ID)
-		if err == nil {
-			output.Headmen = headmen
-		}
-	}
-	return &output, nil
-}
-
-func (s *service) Activate(ctx context.Context, payload ProfilePayload) error {
-	if payload.ID == 0 {
-		return fmt.Errorf("%w: profile id must be greater than 0", utils.ErrInvalidPayload)
-	}
-	return s.repository.Activate(ctx, payload)
-}
 
 func (s *service) FindRegionBoundary(ctx context.Context) (*ProfileRegionBoundaryResponse, error) {
 	return s.repository.FindRegionBoundary(ctx)
@@ -196,11 +173,8 @@ func validateProfilePayload(payload AddProfilePayload) error {
 		if official.Name == "" || official.Position == "" {
 			return fmt.Errorf("%w: official name and position are required", utils.ErrInvalidPayload)
 		}
-		if official.Position == headmanPosition {
+		if utils.GenerateSlug(official.Position) == headmanPosition || strings.EqualFold(official.Position, "kepala desa") || strings.EqualFold(official.Position, "kepala-desa") {
 			return fmt.Errorf("%w: use headmen for officials with kepala-desa position", utils.ErrInvalidPayload)
-		}
-		if err := validateOptionalOfficialDates(official.StartDate, official.FinishDate); err != nil {
-			return err
 		}
 	}
 	if payload.ResourcePotential != nil && (payload.ResourcePotential.Title == "" || payload.ResourcePotential.Detail == "") {
@@ -216,25 +190,6 @@ func calculateProfilePopulation(hamletOne, hamletTwo int64) string {
 func normalizeGovernmentOfficial(payload *GovernmentOfficialInput) {
 	payload.Name = strings.TrimSpace(payload.Name)
 	payload.Position = utils.GenerateSlug(strings.TrimSpace(payload.Position))
-	payload.Phone = strings.TrimSpace(payload.Phone)
-	payload.Email = strings.TrimSpace(payload.Email)
-	payload.Description = strings.TrimSpace(payload.Description)
-	if payload.StartDate != nil {
-		value := strings.TrimSpace(*payload.StartDate)
-		if value == "" {
-			payload.StartDate = nil
-		} else {
-			payload.StartDate = &value
-		}
-	}
-	if payload.FinishDate != nil {
-		value := strings.TrimSpace(*payload.FinishDate)
-		if value == "" {
-			payload.FinishDate = nil
-		} else {
-			payload.FinishDate = &value
-		}
-	}
 }
 
 func validateOptionalOfficialDates(startDate, finishDate *string) error {
@@ -411,8 +366,8 @@ func (s *service) CreateOfficial(ctx context.Context, payload AddOfficialPayload
 	if payload.Position == "" {
 		return fmt.Errorf("%w: position is required", utils.ErrInvalidPayload)
 	}
-	if err := validateOptionalOfficialDates(payload.StartDate, payload.FinishDate); err != nil {
-		return err
+	if utils.GenerateSlug(payload.Position) == headmanPosition || strings.EqualFold(payload.Position, "kepala desa") || strings.EqualFold(payload.Position, "kepala-desa") {
+		return fmt.Errorf("%w: position kepala-desa cannot be added as official", utils.ErrInvalidPayload)
 	}
 	return s.repository.CreateOfficial(ctx, payload)
 }
@@ -441,8 +396,8 @@ func (s *service) UpdateOfficial(ctx context.Context, payload EditOfficialPayloa
 	if payload.Position == "" {
 		return fmt.Errorf("%w: position is required", utils.ErrInvalidPayload)
 	}
-	if err := validateOptionalOfficialDates(payload.StartDate, payload.FinishDate); err != nil {
-		return err
+	if utils.GenerateSlug(payload.Position) == headmanPosition || strings.EqualFold(payload.Position, "kepala desa") || strings.EqualFold(payload.Position, "kepala-desa") {
+		return fmt.Errorf("%w: position kepala-desa cannot be set for official", utils.ErrInvalidPayload)
 	}
 	return s.repository.UpdateOfficial(ctx, payload)
 }

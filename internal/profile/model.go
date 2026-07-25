@@ -168,16 +168,11 @@ type ProfileVisionMissionOutput struct {
 }
 
 type GovernmentStructureResponse struct {
-	ID          uint    `db:"id" json:"id"`
-	Name        string  `db:"name" json:"name"`
-	Position    string  `db:"position" json:"position"`
-	Phone       string  `db:"phone" json:"phone"`
-	Email       string  `db:"email" json:"email"`
-	Description string  `db:"description" json:"description"`
-	OrderNumber int     `db:"order_number" json:"order_number"`
-	IsActive    bool    `db:"is_active" json:"is_active"`
-	StartDate   *string `db:"start_date" json:"start_date"`
-	FinishDate  *string `db:"finish_date" json:"finish_date"`
+	ID          uint   `db:"id" json:"id"`
+	Name        string `db:"name" json:"name"`
+	Position    string `db:"position" json:"position"`
+	OrderNumber int    `db:"order_number" json:"order_number"`
+	IsActive    bool   `db:"is_active" json:"is_active"`
 }
 
 type ResourcePotentialResponse struct {
@@ -187,15 +182,10 @@ type ResourcePotentialResponse struct {
 }
 
 type GovernmentOfficialInput struct {
-	Name        string  `json:"name" binding:"required"`
-	Position    string  `json:"position" binding:"required"`
-	Phone       string  `json:"phone"`
-	Email       string  `json:"email"`
-	Description string  `json:"description"`
-	OrderNumber int     `json:"order_number"`
-	IsActive    bool    `json:"is_active"`
-	StartDate   *string `json:"start_date"`
-	FinishDate  *string `json:"finish_date"`
+	Name        string `json:"name" binding:"required"`
+	Position    string `json:"position" binding:"required"`
+	OrderNumber int    `json:"order_number"`
+	IsActive    bool   `json:"is_active"`
 }
 
 type ResourcePotentialInput struct {
@@ -205,16 +195,11 @@ type ResourcePotentialInput struct {
 }
 
 type AddOfficialPayload struct {
-	VillageID   uint    `db:"village_id" json:"village_id"`
-	Name        string  `db:"name" json:"name" binding:"required"`
-	Position    string  `db:"position" json:"position" binding:"required"`
-	Phone       string  `db:"phone" json:"phone"`
-	Email       string  `db:"email" json:"email"`
-	Description string  `db:"description" json:"description"`
-	OrderNumber int     `db:"order_number" json:"order_number"`
-	IsActive    bool    `db:"is_active" json:"is_active"`
-	StartDate   *string `db:"start_date" json:"start_date"`
-	FinishDate  *string `db:"finish_date" json:"finish_date"`
+	VillageID   uint   `db:"village_id" json:"village_id"`
+	Name        string `db:"name" json:"name" binding:"required"`
+	Position    string `db:"position" json:"position" binding:"required"`
+	OrderNumber int    `db:"order_number" json:"order_number"`
+	IsActive    bool   `db:"is_active" json:"is_active"`
 }
 
 type EditOfficialPayload struct {
@@ -233,17 +218,12 @@ type ListOfficialPayload struct {
 }
 
 type OfficialResponse struct {
-	ID          uint    `db:"id" json:"id"`
-	VillageID   uint    `db:"village_id" json:"village_id"`
-	Name        string  `db:"name" json:"name"`
-	Position    string  `db:"position" json:"position"`
-	Phone       string  `db:"phone" json:"phone"`
-	Email       string  `db:"email" json:"email"`
-	Description string  `db:"description" json:"description"`
-	OrderNumber int     `db:"order_number" json:"order_number"`
-	IsActive    bool    `db:"is_active" json:"is_active"`
-	StartDate   *string `db:"start_date" json:"start_date"`
-	FinishDate  *string `db:"finish_date" json:"finish_date"`
-	CreatedAt   string  `db:"created_at" json:"created_at"`
-	UpdatedAt   string  `db:"updated_at" json:"updated_at"`
+	ID          uint   `db:"id" json:"id"`
+	VillageID   uint   `db:"village_id" json:"village_id"`
+	Name        string `db:"name" json:"name"`
+	Position    string `db:"position" json:"position"`
+	OrderNumber int    `db:"order_number" json:"order_number"`
+	IsActive    bool   `db:"is_active" json:"is_active"`
+	CreatedAt   string `db:"created_at" json:"created_at"`
+	UpdatedAt   string `db:"updated_at" json:"updated_at"`
 }

@@ -59,15 +59,15 @@ type DashboardRef struct {
 }
 
 type DashboardOverviewOutput struct {
-	Title          string `json:"title"`
-	Description    string `json:"description"`
-	Media          string `json:"media"`
-	Area           string `json:"area"`
-	Population     int64  `json:"population"`
-	TotalFamily    int64  `json:"total_family"`
-	TotalHamlet    int64  `json:"total_hamlet"`
-	TotalNews      int64  `json:"total_news"`
-	TotalPotential int64  `json:"total_potential"`
+	Title          string `db:"title" json:"title"`
+	Description    string `db:"description" json:"description"`
+	Media          string `db:"media" json:"media"`
+	Area           string `db:"area" json:"area"`
+	Population     int64  `db:"population" json:"population"`
+	TotalFamily    int64  `db:"total_family" json:"total_family"`
+	TotalHamlet    int64  `db:"total_hamlet" json:"total_hamlet"`
+	TotalNews      int64  `db:"total_news" json:"total_news"`
+	TotalPotential int64  `db:"total_potential" json:"total_potential"`
 }
 
 type AddDashboardOverviewPayload struct {
