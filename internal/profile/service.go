@@ -2,6 +2,7 @@ package profile
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -161,6 +162,9 @@ func validateProfilePayload(payload AddProfilePayload) error {
 	if payload.HamletTwo < 0 {
 		return fmt.Errorf("%w: hamlet_two cannot be negative", utils.ErrInvalidPayload)
 	}
+	if payload.TotalFamily < 0 {
+		return fmt.Errorf("%w: total_family cannot be negative", utils.ErrInvalidPayload)
+	}
 	if payload.TotalRT < 0 {
 		return fmt.Errorf("%w: total_rt cannot be negative", utils.ErrInvalidPayload)
 	}
@@ -178,6 +182,12 @@ func validateProfilePayload(payload AddProfilePayload) error {
 	}
 	if payload.RWHamletTwo < 0 {
 		return fmt.Errorf("%w: rw_hamlet_two cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.TotalMale < 0 {
+		return fmt.Errorf("%w: total_male cannot be negative", utils.ErrInvalidPayload)
+	}
+	if payload.TotalFemale < 0 {
+		return fmt.Errorf("%w: total_female cannot be negative", utils.ErrInvalidPayload)
 	}
 	if payload.Headman != nil {
 		if err := validateHeadmanPayload(*payload.Headman); err != nil {
@@ -319,41 +329,48 @@ func validateHeadmanPeriods(headmen []ProfileOfficialInput) error {
 
 func mapProfileOutput(item ProfileResponse) ProfileOutput {
 	output := ProfileOutput{
-		ID:          item.ID,
-		Name:        item.Name,
-		Province:    item.Province,
-		Regency:     item.Regency,
-		District:    item.District,
-		PostalCode:  item.PostalCode,
-		Address:     item.Address,
-		Phone:       item.Phone,
-		Email:       item.Email,
-		Website:     item.Website,
-		Latitude:    item.Latitude,
-		Longitude:   item.Longitude,
-		Vision:      item.Vision,
-		Mission:     []string(item.Mission),
-		History:     item.History,
-		Description: item.Description,
-		Region:      item.Region,
-		HamletOne:   item.HamletOne,
-		HamletTwo:   item.HamletTwo,
-		TotalFamily: item.TotalFamily,
-		TotalRT:     item.TotalRT,
-		TotalRW:     item.TotalRW,
-		RTHamletOne: item.RTHamletOne,
-		RTHamletTwo: item.RTHamletTwo,
-		RWHamletOne: item.RWHamletOne,
-		RWHamletTwo: item.RWHamletTwo,
-		NorthBorder: item.NorthBorder,
-		EastBorder:  item.EastBorder,
-		SouthBorder: item.SouthBorder,
-		WestBorder:  item.WestBorder,
-		Area:        item.Area,
-		Population:  item.Population,
-		IsActive:    item.IsActive,
-		CreatedAt:   utils.FormatTimestamp(item.CreatedAt),
-		UpdatedAt:   utils.FormatTimestamp(item.UpdatedAt),
+		ID:                    item.ID,
+		Name:                  item.Name,
+		Province:              item.Province,
+		Regency:               item.Regency,
+		District:              item.District,
+		PostalCode:            item.PostalCode,
+		Address:               item.Address,
+		Phone:                 item.Phone,
+		Email:                 item.Email,
+		Website:               item.Website,
+		Latitude:              item.Latitude,
+		Longitude:             item.Longitude,
+		Vision:                item.Vision,
+		Mission:               []string(item.Mission),
+		History:               item.History,
+		Description:           item.Description,
+		Region:                item.Region,
+		HamletOne:             item.HamletOne,
+		HamletTwo:             item.HamletTwo,
+		TotalFamily:           item.TotalFamily,
+		TotalRT:               item.TotalRT,
+		TotalRW:               item.TotalRW,
+		RTHamletOne:           item.RTHamletOne,
+		RTHamletTwo:           item.RTHamletTwo,
+		RWHamletOne:           item.RWHamletOne,
+		RWHamletTwo:           item.RWHamletTwo,
+		NorthBorder:           item.NorthBorder,
+		EastBorder:            item.EastBorder,
+		SouthBorder:           item.SouthBorder,
+		WestBorder:            item.WestBorder,
+		Area:                  item.Area,
+		Population:            item.Population,
+		TotalMale:             item.TotalMale,
+		TotalFemale:           item.TotalFemale,
+		DemographicReligions:  parseDemographicJSON[DemographicSlice](item.DemographicReligionsJSON),
+		DemographicReligionRT: parseDemographicJSON[DemographicBar](item.DemographicReligionRTJSON),
+		DemographicEducation:  parseDemographicJSON[DemographicGenderBar](item.DemographicEducationJSON),
+		DemographicOccupation: parseDemographicJSON[DemographicGenderBar](item.DemographicOccupationJSON),
+		DemographicAges:       parseDemographicJSON[DemographicSingleBar](item.DemographicAgesJSON),
+		IsActive:              item.IsActive,
+		CreatedAt:             utils.FormatTimestamp(item.CreatedAt),
+		UpdatedAt:             utils.FormatTimestamp(item.UpdatedAt),
 	}
 	if item.HeadmanID != 0 {
 		output.Headman = &ProfileOfficialOutput{
@@ -370,6 +387,20 @@ func mapProfileOutput(item ProfileResponse) ProfileOutput {
 		}
 	}
 	return output
+}
+
+func parseDemographicJSON[T any](value string) []T {
+	if strings.TrimSpace(value) == "" {
+		return []T{}
+	}
+	var result []T
+	if err := json.Unmarshal([]byte(value), &result); err != nil {
+		return []T{}
+	}
+	if result == nil {
+		return []T{}
+	}
+	return result
 }
 
 func formatOptionalDate(value *time.Time) string {

@@ -42,6 +42,8 @@ type Village struct {
 	Elevation   string         `db:"elevation" json:"elevation"`
 	Coordinate  string         `db:"coordinate" json:"coordinate"`
 	Population  string         `db:"population" json:"population"`
+	TotalMale   int64          `db:"total_male" json:"total_male"`
+	TotalFemale int64          `db:"total_female" json:"total_female"`
 	CreatedAt   time.Time      `db:"created_at" json:"created_at"`
 	UpdatedAt   time.Time      `db:"updated_at" json:"updated_at"`
 

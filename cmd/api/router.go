@@ -14,6 +14,7 @@ import (
 	"cipicung.id/be/internal/contact"
 	"cipicung.id/be/internal/dashboard"
 	"cipicung.id/be/internal/gallery"
+	"cipicung.id/be/internal/infografis"
 	mapdata "cipicung.id/be/internal/map"
 	"cipicung.id/be/internal/news"
 	"cipicung.id/be/internal/potential"
@@ -76,6 +77,11 @@ func setupRouter(r *gin.Engine, db *sqlx.DB) {
 	contactService := contact.NewService(contactRepository)
 	contactHandler := contact.NewHandler(contactService)
 	contactHandler.RegisterRoutes(api)
+
+	infografisRepository := infografis.NewRepository(db)
+	infografisService := infografis.NewService(infografisRepository)
+	infografisHandler := infografis.NewHandler(infografisService)
+	infografisHandler.RegisterRoutes(api)
 
 	categoryRepository := category.NewRepository(db)
 	categoryService := category.NewService(categoryRepository)

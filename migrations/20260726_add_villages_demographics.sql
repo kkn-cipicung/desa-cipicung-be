@@ -1,0 +1,8 @@
+ALTER TABLE villages
+	ADD COLUMN IF NOT EXISTS total_male BIGINT NOT NULL DEFAULT 0,
+	ADD COLUMN IF NOT EXISTS total_female BIGINT NOT NULL DEFAULT 0,
+	ADD COLUMN IF NOT EXISTS demographic_religions JSONB NOT NULL DEFAULT '[]'::jsonb,
+	ADD COLUMN IF NOT EXISTS demographic_religion_rt JSONB NOT NULL DEFAULT '[]'::jsonb,
+	ADD COLUMN IF NOT EXISTS demographic_education JSONB NOT NULL DEFAULT '[]'::jsonb,
+	ADD COLUMN IF NOT EXISTS demographic_occupation JSONB NOT NULL DEFAULT '[]'::jsonb,
+	ADD COLUMN IF NOT EXISTS demographic_ages JSONB NOT NULL DEFAULT '[]'::jsonb;

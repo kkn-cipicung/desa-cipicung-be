@@ -51,14 +51,17 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 		INSERT INTO villages (
 			name, province, regency, district, postal_code, address, phone, email, website,
 			latitude, longitude, vision, mission, history, description, region, hamlet_one,
-			hamlet_two, total_rt, total_rw, rt_hamlet_one, rt_hamlet_two, rw_hamlet_one,
+			hamlet_two, total_family, total_rt, total_rw, rt_hamlet_one, rt_hamlet_two, rw_hamlet_one,
 			rw_hamlet_two, north_border, east_border, south_border, west_border, area, population,
+			total_male, total_female, demographic_religions, demographic_religion_rt,
+			demographic_education, demographic_occupation, demographic_ages,
 			created_at, updated_at
 		)
 		VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9,
 			$10, $11, $12, $13, $14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+			$19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31,
+			$32, $33, $34::jsonb, $35::jsonb, $36::jsonb, $37::jsonb, $38::jsonb,
 			CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 		)
 		RETURNING id
@@ -68,10 +71,13 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 		payload.Name, payload.Province, payload.Regency, payload.District, payload.PostalCode,
 		payload.Address, payload.Phone, payload.Email, payload.Website, payload.Latitude,
 		payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History, payload.Description,
-		payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalRT, payload.TotalRW,
-		payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne, payload.RWHamletTwo,
+		payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalFamily, payload.TotalRT,
+		payload.TotalRW, payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne, payload.RWHamletTwo,
 		payload.NorthBorder, payload.EastBorder, payload.SouthBorder, payload.WestBorder,
 		payload.Area, payload.Population,
+		payload.TotalMale, payload.TotalFemale, demographicJSON(payload.DemographicReligions),
+		demographicJSON(payload.DemographicReligionRT), demographicJSON(payload.DemographicEducation),
+		demographicJSON(payload.DemographicOccupation), demographicJSON(payload.DemographicAges),
 	).Scan(&villageID); err != nil {
 		return err
 	}
@@ -253,18 +259,26 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 			region = $17,
 			hamlet_one = $18,
 			hamlet_two = $19,
-			total_rt = $20,
-			total_rw = $21,
-			rt_hamlet_one = $22,
-			rt_hamlet_two = $23,
-			rw_hamlet_one = $24,
-			rw_hamlet_two = $25,
-			north_border = $26,
-			east_border = $27,
-			south_border = $28,
-			west_border = $29,
-			area = $30,
-			population = $31,
+			total_family = $20,
+			total_rt = $21,
+			total_rw = $22,
+			rt_hamlet_one = $23,
+			rt_hamlet_two = $24,
+			rw_hamlet_one = $25,
+			rw_hamlet_two = $26,
+			north_border = $27,
+			east_border = $28,
+			south_border = $29,
+			west_border = $30,
+			area = $31,
+			population = $32,
+			total_male = $33,
+			total_female = $34,
+			demographic_religions = $35::jsonb,
+			demographic_religion_rt = $36::jsonb,
+			demographic_education = $37::jsonb,
+			demographic_occupation = $38::jsonb,
+			demographic_ages = $39::jsonb,
 			updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1
 	`
@@ -272,10 +286,13 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 		payload.ID, payload.Name, payload.Province, payload.Regency, payload.District,
 		payload.PostalCode, payload.Address, payload.Phone, payload.Email, payload.Website,
 		payload.Latitude, payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History,
-		payload.Description, payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalRT,
-		payload.TotalRW, payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne,
+		payload.Description, payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalFamily,
+		payload.TotalRT, payload.TotalRW, payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne,
 		payload.RWHamletTwo, payload.NorthBorder, payload.EastBorder, payload.SouthBorder, payload.WestBorder,
 		payload.Area, payload.Population,
+		payload.TotalMale, payload.TotalFemale, demographicJSON(payload.DemographicReligions),
+		demographicJSON(payload.DemographicReligionRT), demographicJSON(payload.DemographicEducation),
+		demographicJSON(payload.DemographicOccupation), demographicJSON(payload.DemographicAges),
 	)
 	if err != nil {
 		return err
@@ -377,6 +394,13 @@ func profileSelectQuery() string {
 			COALESCE(v.east_border, '') AS east_border, COALESCE(v.south_border, '') AS south_border,
 			COALESCE(v.west_border, '') AS west_border, COALESCE(v.area, '') AS area,
 			COALESCE(v.population, '') AS population,
+			COALESCE(v.total_male, 0) AS total_male,
+			COALESCE(v.total_female, 0) AS total_female,
+			COALESCE(v.demographic_religions, '[]'::jsonb)::text AS demographic_religions,
+			COALESCE(v.demographic_religion_rt, '[]'::jsonb)::text AS demographic_religion_rt,
+			COALESCE(v.demographic_education, '[]'::jsonb)::text AS demographic_education,
+			COALESCE(v.demographic_occupation, '[]'::jsonb)::text AS demographic_occupation,
+			COALESCE(v.demographic_ages, '[]'::jsonb)::text AS demographic_ages,
 			COALESCE(v.is_active, FALSE) AS is_active,
 			COALESCE(v.created_at, NOW()) AS created_at,
 			COALESCE(v.updated_at, NOW()) AS updated_at,
