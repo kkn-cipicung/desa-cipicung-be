@@ -202,6 +202,7 @@ func (r *repository) FindGovernmentStructure(ctx context.Context) ([]GovernmentS
 			COALESCE(order_number, 0) AS order_number,
 			COALESCE(is_active, false) AS is_active
 		FROM officials
+		WHERE is_active = TRUE
 		ORDER BY
 			CASE WHEN position = $1 AND is_active = TRUE THEN 0 ELSE 1 END,
 			order_number ASC,
