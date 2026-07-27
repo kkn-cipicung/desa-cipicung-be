@@ -87,6 +87,16 @@ func runAutoMigrations(db *sqlx.DB) {
 
 		ALTER TABLE categories ALTER COLUMN type DROP NOT NULL;
 		ALTER TABLE categories ALTER COLUMN type SET DEFAULT '';
+
+		ALTER TABLE galleries ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'gallery';
+
+		UPDATE galleries g
+		SET type = c.type
+		FROM categories c
+		WHERE g.category_id = c.id
+			AND c.type IN ('dashboard', 'gallery');
+
+		CREATE INDEX IF NOT EXISTS idx_galleries_type ON galleries(type);
 	`
 	if _, err := db.Exec(query); err != nil {
 		log.Println("Auto migration notice:", err)
