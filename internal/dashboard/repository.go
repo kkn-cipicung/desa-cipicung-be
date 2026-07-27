@@ -164,13 +164,13 @@ func (r *repository) FindOverview(ctx context.Context) (*DashboardOverviewOutput
 
 	query := `
 		SELECT 
-			COALESCE((SELECT title FROM villages WHERE title <> '' ORDER BY id DESC LIMIT 1), '') AS title,
-			COALESCE((SELECT description FROM villages WHERE description <> '' ORDER BY id DESC LIMIT 1), '') AS description,
-			COALESCE((SELECT m.file_path FROM villages v JOIN media m ON v.id = m.entity_id AND m.entity_type = 'village' ORDER BY v.id DESC LIMIT 1), '') AS media,
-			COALESCE((SELECT area FROM villages WHERE area <> '' ORDER BY id DESC LIMIT 1), '') AS area,
-			COALESCE((SELECT NULLIF(regexp_replace(COALESCE(population, ''), '[^0-9]', '', 'g'), '')::BIGINT FROM villages ORDER BY id DESC LIMIT 1), (SELECT total_population FROM villages ORDER BY id DESC LIMIT 1), 0) AS population,
-			COALESCE((SELECT total_family FROM villages ORDER BY id DESC LIMIT 1), 0) AS total_family,
-			COALESCE((SELECT CASE WHEN hamlet_one IS NOT NULL AND hamlet_two IS NOT NULL THEN 2 ELSE 1 END FROM villages ORDER BY id DESC LIMIT 1), 0) AS total_hamlet,
+			COALESCE((SELECT title FROM villages WHERE title <> '' ORDER BY id ASC LIMIT 1), '') AS title,
+			COALESCE((SELECT description FROM villages WHERE description <> '' ORDER BY id ASC LIMIT 1), '') AS description,
+			COALESCE((SELECT m.file_path FROM villages v JOIN media m ON v.id = m.entity_id AND m.entity_type = 'village' ORDER BY v.id ASC LIMIT 1), '') AS media,
+			COALESCE((SELECT area FROM villages WHERE area <> '' ORDER BY id ASC LIMIT 1), '') AS area,
+			COALESCE((SELECT NULLIF(regexp_replace(COALESCE(population, ''), '[^0-9]', '', 'g'), '')::BIGINT FROM villages ORDER BY id ASC LIMIT 1), (SELECT total_population FROM villages ORDER BY id ASC LIMIT 1), 0) AS population,
+			COALESCE((SELECT total_family FROM villages ORDER BY id ASC LIMIT 1), 0) AS total_family,
+			COALESCE((SELECT CASE WHEN hamlet_one IS NOT NULL AND hamlet_two IS NOT NULL THEN 2 ELSE 1 END FROM villages ORDER BY id ASC LIMIT 1), 0) AS total_hamlet,
 			COALESCE((SELECT COUNT(*) FROM documents), 0) AS total_news,
 			COALESCE((SELECT COUNT(*) FROM potentials), 0) AS total_potential
 	`
@@ -190,7 +190,7 @@ func (r *repository) CreateOverview(ctx context.Context, payload AddDashboardOve
 	defer tx.Rollback()
 
 	var existingID uint
-	_ = tx.GetContext(ctx, &existingID, `SELECT id FROM villages ORDER BY id DESC LIMIT 1`)
+	_ = tx.GetContext(ctx, &existingID, `SELECT id FROM villages ORDER BY id ASC LIMIT 1`)
 
 	var villageID uint
 	var oldMedia *utils.ReplacedMediaPayload

@@ -40,7 +40,6 @@ func (r *repository) Detail(ctx context.Context) (*VillageStats, error) {
 			COALESCE(demographic_occupation, '[]'::jsonb)::text AS occupation,
 			COALESCE(demographic_ages, '[]'::jsonb)::text AS ages
 		FROM villages
-		ORDER BY is_active DESC, id DESC
 		LIMIT 1
 	`
 
