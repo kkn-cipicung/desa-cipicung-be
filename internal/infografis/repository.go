@@ -24,7 +24,11 @@ func (r *repository) Detail(ctx context.Context) (*VillageStats, error) {
 	var result VillageStats
 	query := `
 		SELECT
-			COALESCE(NULLIF(population, '')::bigint, total_population, 0) AS population,
+			COALESCE(
+				NULLIF(regexp_replace(COALESCE(population, ''), '[^0-9]', '', 'g'), '')::bigint,
+				total_population,
+				0
+			) AS population,
 			COALESCE(total_family, 0) AS family,
 			COALESCE(total_male, 0) AS male,
 			COALESCE(total_female, 0) AS female,
