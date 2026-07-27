@@ -41,8 +41,8 @@ func (r *repository) Create(ctx context.Context, payload AddDashboardPayload, me
 	defer tx.Rollback()
 
 	query := `
-		INSERT INTO galleries (created_by, category_id, title, description, media_id)
-		SELECT $1, $2, $3, $4, NULL
+		INSERT INTO galleries (created_by, category_id, title, description, media_id, type)
+		SELECT $1, $2, $3, $4, NULL, 'dashboard'
 		FROM categories
 		WHERE id = $2
 		RETURNING id
@@ -74,8 +74,9 @@ func (r *repository) List(ctx context.Context, payload ListDashboardPayload) ([]
 			COALESCE(g.created_at, NOW()) AS created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
-		LEFT JOIN categories c ON g.category_id = c.id
+		JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
+		WHERE g.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -98,8 +99,9 @@ func (r *repository) Detail(ctx context.Context) (*DashboardResponse, error) {
 			COALESCE(g.created_at, NOW()) AS created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
-		LEFT JOIN categories c ON g.category_id = c.id
+		JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
+		WHERE g.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT 1
 	`
@@ -125,9 +127,10 @@ func (r *repository) FindActive(ctx context.Context) (*DashboardResponse, error)
 			COALESCE(g.created_at, NOW()) AS created_at
 		FROM galleries g
 		LEFT JOIN users u ON g.created_by = u.id
-		LEFT JOIN categories c ON g.category_id = c.id
+		JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
 		WHERE g.is_active = TRUE
+			AND g.type = 'dashboard'
 		ORDER BY g.id DESC
 		LIMIT 1
 	`
@@ -143,8 +146,9 @@ func (r *repository) FindActive(ctx context.Context) (*DashboardResponse, error)
 					COALESCE(g.created_at, NOW()) AS created_at
 				FROM galleries g
 				LEFT JOIN users u ON g.created_by = u.id
-				LEFT JOIN categories c ON g.category_id = c.id
+				JOIN categories c ON g.category_id = c.id
 				LEFT JOIN media m ON g.media_id = m.id
+				WHERE g.type = 'dashboard'
 				ORDER BY g.id DESC
 				LIMIT 1
 			`
@@ -282,6 +286,7 @@ func (r *repository) Update(ctx context.Context, payload EditDashboardPayload, m
 			is_active = $5
 		WHERE id = $1
 			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = $2)
+			AND type = 'dashboard'
 	`
 	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description, payload.IsActive)
 	if err != nil {
@@ -323,6 +328,7 @@ func (r *repository) Activate(ctx context.Context, payload DashboardPayload) err
 		SELECT EXISTS (
 			SELECT 1 FROM galleries g
 			WHERE g.id = $1
+				AND g.type = 'dashboard'
 		)
 	`, payload.ID); err != nil {
 		return err
@@ -350,7 +356,9 @@ func deactivateOtherDashboards(ctx context.Context, tx *sqlx.Tx, activeID uint) 
 	_, err := tx.ExecContext(ctx, `
 		UPDATE galleries g
 		SET is_active = FALSE
-		WHERE g.id <> $1 AND g.is_active = TRUE
+		WHERE g.type = 'dashboard'
+			AND g.id <> $1
+			AND g.is_active = TRUE
 	`, activeID)
 	return err
 }
@@ -359,6 +367,7 @@ func (r *repository) Delete(ctx context.Context, payload DashboardPayload) error
 	query := `
 		DELETE FROM galleries
 		WHERE id = $1
+			AND type = 'dashboard'
 	`
 
 	result, err := r.db.ExecContext(ctx, query, payload.ID)

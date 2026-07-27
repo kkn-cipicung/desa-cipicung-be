@@ -36,8 +36,8 @@ func (r *repository) Create(ctx context.Context, payload AddGalleryPayload, medi
 	defer tx.Rollback()
 
 	query := `
-		INSERT INTO galleries (created_by, category_id, title, description, media_id)
-		SELECT $1, $2, $3, $4, NULL
+		INSERT INTO galleries (created_by, category_id, title, description, media_id, type)
+		SELECT $1, $2, $3, $4, NULL, 'gallery'
 		FROM categories
 		WHERE id = $2
 		RETURNING id
@@ -64,6 +64,7 @@ func (r *repository) List(ctx context.Context, payload ListGalleryPayload) ([]Ga
 		FROM galleries g
 		JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
+		WHERE g.type = 'gallery'
 		ORDER BY g.id DESC
 		LIMIT $1 OFFSET $2
 	`
@@ -80,9 +81,10 @@ func (r *repository) FindByID(ctx context.Context, payload GalleryPayload) (*Gal
 			COALESCE(g.title, '') AS title, COALESCE(g.description, '') AS description,
 			COALESCE(m.file_path, '') AS image
 		FROM galleries g
-		LEFT JOIN categories c ON g.category_id = c.id
+		JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
 		WHERE g.id = $1
+			AND g.type = 'gallery'
 	`
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -107,6 +109,7 @@ func (r *repository) Update(ctx context.Context, payload EditGalleryPayload, med
 			description = $4
 		WHERE id = $1
 			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = $2)
+			AND type = 'gallery'
 	`
 	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description)
 	if err != nil {
@@ -136,6 +139,7 @@ func (r *repository) Delete(ctx context.Context, payload GalleryPayload) error {
 	query := `
 		DELETE FROM galleries
 		WHERE id = $1
+			AND type = 'gallery'
 	`
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
 	if err != nil {
@@ -157,7 +161,13 @@ func ensureGalleryAffected(result sql.Result) error {
 
 func ensureGalleryExists(ctx context.Context, tx *sqlx.Tx, id uint) error {
 	var exists bool
-	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM galleries WHERE id = $1)`, id); err != nil {
+	if err := tx.GetContext(ctx, &exists, `
+		SELECT EXISTS (
+			SELECT 1 FROM galleries g
+			WHERE g.id = $1
+				AND g.type = 'gallery'
+		)
+	`, id); err != nil {
 		return err
 	}
 	if !exists {

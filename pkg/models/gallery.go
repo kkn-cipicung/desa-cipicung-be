@@ -14,6 +14,7 @@ type Gallery struct {
 	CategoryID  uint      `db:"category_id" json:"category_id"`
 	MediaID     *uint     `db:"media_id" json:"media_id"`
 	IsActive    bool      `db:"is_active" json:"is_active"`
+	Type        string    `db:"type" json:"type"`
 
 	// Relations
 	Creator *User  `db:"-" json:"creator,omitempty"`
