@@ -2,14 +2,18 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
+
   pull_request:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   build:
     name: Build & Test
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -23,7 +27,9 @@ jobs:
         run: go test -v ./...
 
       - name: Build Binary
-        run: GOOS=linux GOARCH=amd64 go build -o main ./cmd/api
+        run: |
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
+          go build -o main ./cmd/api
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -33,36 +39,53 @@ jobs:
           retention-days: 1
 
   deploy:
-    name: Deploy to VPS
+    name: Deploy to Rumahweb
     needs: build
+
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
     runs-on: ubuntu-latest
+
     steps:
       - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
           name: cipicung-be-binary
+          path: artifact
 
-      - name: Transfer Binary to VPS
-        uses: appleboy/scp-action@master
+      - name: Transfer Binary
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT }}
+
+          key: ${{ secrets.VPS_SSH_KEY }}
           passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
-          source: "main"
-          target: "/home/cipt8645/app/desa-cipicung-be/"
 
-      - name: Restart Service on VPS
-        uses: appleboy/ssh-action@master
+          source: "artifact/main"
+          target: "/home/cipt8645/app/desa-cipicung-be/"
+          strip_components: 1
+          overwrite: true
+
+      - name: Prepare Binary
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+
+          key: ${{ secrets.VPS_SSH_KEY }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
+
           script: |
-            cd /home/cipt8645/app/desa-cipicung-be/
+            set -e
+
+            cd /home/cipt8645/app/desa-cipicung-be
+
             chmod +x main
-            echo "${{ secrets.VPS_PASSWORD }}" | sudo -S systemctl restart cipicung-api.service
+
+            echo "Deployment berhasil"
+            whoami
+            pwd
+            ls -lah main
