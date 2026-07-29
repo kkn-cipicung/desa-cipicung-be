@@ -39,13 +39,17 @@ func (r *repository) Create(ctx context.Context, payload AddNewsPayload, media *
 
 	documentQuery := `
 		INSERT INTO documents (category_id, uploaded_by, title, description, media_id)
-		VALUES ($1, $2, $3, $4, NULL)
-		RETURNING id
+		VALUES (?, ?, ?, ?, NULL)
 	`
-	var documentID uint
-	if err := tx.QueryRowContext(ctx, documentQuery, payload.CategoryID, payload.UploadedBy, payload.Title, payload.Description).Scan(&documentID); err != nil {
+	result, err := tx.ExecContext(ctx, documentQuery, payload.CategoryID, payload.UploadedBy, payload.Title, payload.Description)
+	if err != nil {
 		return fmt.Errorf("insert document: %w", err)
 	}
+	insertID, err := result.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("insert document id: %w", err)
+	}
+	documentID := uint(insertID)
 
 	if _, err := utils.AttachMediaToEntityColumn(ctx, tx, media, "news", documentID, "image", "documents", "media_id"); err != nil {
 		return fmt.Errorf("attach news media: %w", err)
@@ -70,7 +74,7 @@ func (r *repository) List(ctx context.Context, payload ListNewsPayload) ([]NewsR
 		LEFT JOIN categories c ON d.category_id = c.id
 		LEFT JOIN media m ON d.media_id = m.id
 		ORDER BY d.created_at DESC
-		LIMIT $1 OFFSET $2
+		LIMIT ? OFFSET ?
 	`
 
 	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index); err != nil {
@@ -92,7 +96,7 @@ func (r *repository) FindByID(ctx context.Context, payload NewsByIdPayload) (*Ne
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
 		LEFT JOIN media m ON d.media_id = m.id
-		WHERE d.id = $1
+		WHERE d.id = ?
 	`
 
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
@@ -114,12 +118,12 @@ func (r *repository) Update(ctx context.Context, payload EditNewsPayload, media 
 
 	query := `
 		UPDATE documents
-		SET category_id = $2,
-			title = $3,
-			description = $4
-		WHERE id = $1
+		SET category_id = ?,
+			title = ?,
+			description = ?
+		WHERE id = ?
 	`
-	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description)
+	result, err := tx.ExecContext(ctx, query, payload.CategoryID, payload.Title, payload.Description, payload.ID)
 	if err != nil {
 		return err
 	}
@@ -146,7 +150,7 @@ func (r *repository) Update(ctx context.Context, payload EditNewsPayload, media 
 func (r *repository) Delete(ctx context.Context, payload NewsPayload) error {
 	query := `
 		DELETE FROM documents
-		WHERE id = $1
+		WHERE id = ?
 	`
 
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
@@ -178,7 +182,7 @@ func (r *repository) FindByDate(ctx context.Context, payload NewsByDatePayload) 
 		LEFT JOIN users u ON d.uploaded_by = u.id
 		LEFT JOIN categories c ON d.category_id = c.id
 		LEFT JOIN media m ON d.media_id = m.id
-		WHERE d.created_at::date = $1
+		WHERE DATE(d.created_at) = ?
 		ORDER BY d.created_at DESC
 	`
 
@@ -195,7 +199,7 @@ func (r *repository) FindHeader(ctx context.Context, payload NewsByIdPayload) (N
 	query := `
 		SELECT d.id, COALESCE(d.title, '') AS title
 		FROM documents d
-		WHERE d.id = $1
+		WHERE d.id = ?
 	`
 
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {

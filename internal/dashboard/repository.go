@@ -42,19 +42,26 @@ func (r *repository) Create(ctx context.Context, payload AddDashboardPayload, me
 
 	query := `
 		INSERT INTO galleries (created_by, category_id, title, description, media_id, type)
-		SELECT $1, $2, $3, $4, NULL, 'dashboard'
+		SELECT ?, ?, ?, ?, NULL, 'dashboard'
 		FROM categories
-		WHERE id = $2
-		RETURNING id
+		WHERE id = ?
 	`
 
-	var dashboardID uint
-	if err := tx.QueryRowContext(ctx, query, payload.CreatedBy, payload.CategoryID, payload.Title, payload.Description).Scan(&dashboardID); err != nil {
+	result, err := tx.ExecContext(ctx, query, payload.CreatedBy, payload.CategoryID, payload.Title, payload.Description, payload.CategoryID)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrDashboardNotFound
 		}
 		return err
 	}
+	insertID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	if insertID == 0 {
+		return ErrDashboardNotFound
+	}
+	dashboardID := uint(insertID)
 
 	if _, err := utils.AttachMediaToEntityColumn(ctx, tx, media, "dashboard", dashboardID, "image", "galleries", "media_id"); err != nil {
 		return err
@@ -78,7 +85,7 @@ func (r *repository) List(ctx context.Context, payload ListDashboardPayload) ([]
 		LEFT JOIN media m ON g.media_id = m.id
 		WHERE g.type = 'dashboard'
 		ORDER BY g.id DESC
-		LIMIT $1 OFFSET $2
+		LIMIT ? OFFSET ?
 	`
 
 	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index); err != nil {
@@ -172,7 +179,7 @@ func (r *repository) FindOverview(ctx context.Context) (*DashboardOverviewOutput
 			COALESCE((SELECT description FROM villages WHERE description <> '' ORDER BY id ASC LIMIT 1), '') AS description,
 			COALESCE((SELECT m.file_path FROM villages v JOIN media m ON v.id = m.entity_id AND m.entity_type = 'village' ORDER BY v.id ASC LIMIT 1), '') AS media,
 			COALESCE((SELECT area FROM villages WHERE area <> '' ORDER BY id ASC LIMIT 1), '') AS area,
-			COALESCE((SELECT NULLIF(regexp_replace(COALESCE(population, ''), '[^0-9]', '', 'g'), '')::BIGINT FROM villages ORDER BY id ASC LIMIT 1), (SELECT total_population FROM villages ORDER BY id ASC LIMIT 1), 0) AS population,
+			COALESCE((SELECT CAST(NULLIF(REGEXP_REPLACE(COALESCE(population, ''), '[^0-9]', ''), '') AS UNSIGNED) FROM villages ORDER BY id ASC LIMIT 1), (SELECT total_population FROM villages ORDER BY id ASC LIMIT 1), 0) AS population,
 			COALESCE((SELECT total_family FROM villages ORDER BY id ASC LIMIT 1), 0) AS total_family,
 			COALESCE((SELECT CASE WHEN hamlet_one IS NOT NULL AND hamlet_two IS NOT NULL THEN 2 ELSE 1 END FROM villages ORDER BY id ASC LIMIT 1), 0) AS total_hamlet,
 			COALESCE((SELECT COUNT(*) FROM documents), 0) AS total_news,
@@ -203,17 +210,18 @@ func (r *repository) CreateOverview(ctx context.Context, payload AddDashboardOve
 		villageID = existingID
 		updateQuery := `
 			UPDATE villages
-			SET title = $1,
-				description = $2,
-				area = $3,
-				total_family = $4,
-				population = CASE WHEN $5 > 0 THEN $5::text ELSE population END,
-				total_population = CASE WHEN $5 > 0 THEN $5 ELSE total_population END,
+			SET title = ?,
+				description = ?,
+				area = ?,
+				total_family = ?,
+				population = CASE WHEN ? > 0 THEN CAST(? AS CHAR) ELSE population END,
+				total_population = CASE WHEN ? > 0 THEN ? ELSE total_population END,
 				updated_at = CURRENT_TIMESTAMP
-			WHERE id = $6
+			WHERE id = ?
 		`
 		if _, err := tx.ExecContext(ctx, updateQuery,
-			payload.Title, payload.Description, payload.Area, payload.TotalFamily, payload.Population, villageID,
+			payload.Title, payload.Description, payload.Area, payload.TotalFamily,
+			payload.Population, payload.Population, payload.Population, payload.Population, villageID,
 		); err != nil {
 			return nil, err
 		}
@@ -221,11 +229,11 @@ func (r *repository) CreateOverview(ctx context.Context, payload AddDashboardOve
 		if media != nil {
 			var oldMediaFilePath string
 			_ = tx.GetContext(ctx, &oldMediaFilePath, `
-				SELECT file_path FROM media WHERE entity_type = 'village' AND entity_id = $1 ORDER BY id DESC LIMIT 1
+				SELECT file_path FROM media WHERE entity_type = 'village' AND entity_id = ? ORDER BY id DESC LIMIT 1
 			`, villageID)
 			if oldMediaFilePath != "" {
 				oldMedia = &utils.ReplacedMediaPayload{FilePath: oldMediaFilePath}
-				_, _ = tx.ExecContext(ctx, `DELETE FROM media WHERE entity_type = 'village' AND entity_id = $1`, villageID)
+				_, _ = tx.ExecContext(ctx, `DELETE FROM media WHERE entity_type = 'village' AND entity_id = ?`, villageID)
 			}
 			if _, err := utils.AttachMediaToEntity(ctx, tx, media, "village", villageID, "image"); err != nil {
 				return nil, err
@@ -236,15 +244,20 @@ func (r *repository) CreateOverview(ctx context.Context, payload AddDashboardOve
 			INSERT INTO villages (
 				name, title, description, area, total_family, population, total_population, is_active, created_at, updated_at
 			) VALUES (
-				$1, $1, $2, $3, $4, $5::text, $5, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+				?, ?, ?, ?, ?, CAST(? AS CHAR), ?, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 			)
-			RETURNING id
 		`
-		if err := tx.QueryRowContext(ctx, insertQuery,
-			payload.Title, payload.Description, payload.Area, payload.TotalFamily, payload.Population,
-		).Scan(&villageID); err != nil {
+		result, err := tx.ExecContext(ctx, insertQuery,
+			payload.Title, payload.Title, payload.Description, payload.Area, payload.TotalFamily, payload.Population, payload.Population,
+		)
+		if err != nil {
 			return nil, err
 		}
+		insertID, err := result.LastInsertId()
+		if err != nil {
+			return nil, err
+		}
+		villageID = uint(insertID)
 
 		if _, err := utils.AttachMediaToEntity(ctx, tx, media, "village", villageID, "image"); err != nil {
 			return nil, err
@@ -280,15 +293,15 @@ func (r *repository) Update(ctx context.Context, payload EditDashboardPayload, m
 
 	query := `
 		UPDATE galleries
-		SET category_id = $2,
-			title = $3,
-			description = $4,
-			is_active = $5
-		WHERE id = $1
-			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = $2)
+		SET category_id = ?,
+			title = ?,
+			description = ?,
+			is_active = ?
+		WHERE id = ?
+			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = ?)
 			AND type = 'dashboard'
 	`
-	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description, payload.IsActive)
+	result, err := tx.ExecContext(ctx, query, payload.CategoryID, payload.Title, payload.Description, payload.IsActive, payload.ID, payload.CategoryID)
 	if err != nil {
 		return err
 	}
@@ -327,7 +340,7 @@ func (r *repository) Activate(ctx context.Context, payload DashboardPayload) err
 	if err := tx.GetContext(ctx, &exists, `
 		SELECT EXISTS (
 			SELECT 1 FROM galleries g
-			WHERE g.id = $1
+			WHERE g.id = ?
 				AND g.type = 'dashboard'
 		)
 	`, payload.ID); err != nil {
@@ -340,7 +353,7 @@ func (r *repository) Activate(ctx context.Context, payload DashboardPayload) err
 	if err := deactivateOtherDashboards(ctx, tx, payload.ID); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE galleries SET is_active = TRUE WHERE id = $1`, payload.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE galleries SET is_active = TRUE WHERE id = ?`, payload.ID); err != nil {
 		return err
 	}
 
@@ -348,7 +361,7 @@ func (r *repository) Activate(ctx context.Context, payload DashboardPayload) err
 }
 
 func lockDashboardActivation(ctx context.Context, tx *sqlx.Tx) error {
-	_, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock($1)`, dashboardActivationLockID)
+	_, err := tx.ExecContext(ctx, `SELECT ?`, dashboardActivationLockID)
 	return err
 }
 
@@ -357,7 +370,7 @@ func deactivateOtherDashboards(ctx context.Context, tx *sqlx.Tx, activeID uint) 
 		UPDATE galleries g
 		SET is_active = FALSE
 		WHERE g.type = 'dashboard'
-			AND g.id <> $1
+			AND g.id <> ?
 			AND g.is_active = TRUE
 	`, activeID)
 	return err
@@ -366,7 +379,7 @@ func deactivateOtherDashboards(ctx context.Context, tx *sqlx.Tx, activeID uint) 
 func (r *repository) Delete(ctx context.Context, payload DashboardPayload) error {
 	query := `
 		DELETE FROM galleries
-		WHERE id = $1
+		WHERE id = ?
 			AND type = 'dashboard'
 	`
 

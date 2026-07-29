@@ -30,7 +30,7 @@ func NewRepository(db *sqlx.DB) Repository {
 func (r *repository) Create(ctx context.Context, payload AddCategoryPayload, slug string) error {
 	query := `
 		INSERT INTO categories (name, slug, type)
-		VALUES ($1, $2, $3)
+		VALUES (?, ?, ?)
 	`
 	_, err := r.db.ExecContext(ctx, query, payload.Name, slug, payload.Type)
 	return err
@@ -43,12 +43,12 @@ func (r *repository) List(ctx context.Context, payload ListCategoryPayload) ([]m
 		SELECT id, COALESCE(name, '') AS name, COALESCE(slug, '') AS slug,
 			COALESCE(type, '') AS type, COALESCE(created_at, NOW()) AS created_at
 		FROM categories
-		WHERE ($3 = '' OR LOWER(TRIM(type)) = $3)
+		WHERE (? = '' OR LOWER(TRIM(type)) = ?)
 		ORDER BY id DESC
-		LIMIT $1 OFFSET $2
+		LIMIT ? OFFSET ?
 	`
 
-	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index, payload.Type); err != nil {
+	if err := r.db.SelectContext(ctx, &results, query, payload.Type, payload.Type, payload.Limit, payload.Index); err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -60,7 +60,7 @@ func (r *repository) FindByID(ctx context.Context, payload CategoryPayload) (*mo
 		SELECT id, COALESCE(name, '') AS name, COALESCE(slug, '') AS slug,
 			COALESCE(type, '') AS type, COALESCE(created_at, NOW()) AS created_at
 		FROM categories
-		WHERE id = $1
+		WHERE id = ?
 	`
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -74,10 +74,10 @@ func (r *repository) FindByID(ctx context.Context, payload CategoryPayload) (*mo
 func (r *repository) Update(ctx context.Context, payload EditCategoryPayload, slug string) error {
 	query := `
 		UPDATE categories
-		SET name = $2, slug = $3, type = $4
-		WHERE id = $1
+		SET name = ?, slug = ?, type = ?
+		WHERE id = ?
 	`
-	result, err := r.db.ExecContext(ctx, query, payload.ID, payload.Name, slug, payload.Type)
+	result, err := r.db.ExecContext(ctx, query, payload.Name, slug, payload.Type, payload.ID)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (r *repository) Update(ctx context.Context, payload EditCategoryPayload, sl
 func (r *repository) Delete(ctx context.Context, payload CategoryPayload) error {
 	query := `
 		DELETE FROM categories
-		WHERE id = $1
+		WHERE id = ?
 	`
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
 	if err != nil {

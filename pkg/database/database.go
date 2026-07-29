@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
 var DB *sqlx.DB
@@ -22,11 +22,11 @@ type Config struct {
 
 func Connect(cfg Config) (*sqlx.DB, error) {
 	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode,
+		"%s:%s@tcp(%s:%d)/%s?parseTime=true&charset=utf8mb4&loc=Local",
+		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName,
 	)
 
-	db, err := sqlx.Open("postgres", dsn)
+	db, err := sqlx.Open("mysql", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("error opening database: %w", err)
 	}
@@ -42,63 +42,30 @@ func Connect(cfg Config) (*sqlx.DB, error) {
 	db.SetConnMaxLifetime(5 * time.Minute)
 
 	DB = db
-	log.Println("Successfully connected to PostgreSQL database:", cfg.DBName)
+	log.Println("Successfully connected to MariaDB database:", cfg.DBName)
 	runAutoMigrations(db)
 
 	return db, nil
 }
 
 func runAutoMigrations(db *sqlx.DB) {
-	query := `
-		ALTER TABLE villages
-			ADD COLUMN IF NOT EXISTS website VARCHAR(255),
-			ADD COLUMN IF NOT EXISTS region TEXT,
-			ADD COLUMN IF NOT EXISTS hamlet_one BIGINT,
-			ADD COLUMN IF NOT EXISTS hamlet_two BIGINT,
-			ADD COLUMN IF NOT EXISTS total_rt BIGINT NOT NULL DEFAULT 0,
-			ADD COLUMN IF NOT EXISTS total_rw BIGINT NOT NULL DEFAULT 0,
-			ADD COLUMN IF NOT EXISTS rt_hamlet_one BIGINT NOT NULL DEFAULT 0,
-			ADD COLUMN IF NOT EXISTS rt_hamlet_two BIGINT NOT NULL DEFAULT 0,
-			ADD COLUMN IF NOT EXISTS rw_hamlet_one BIGINT NOT NULL DEFAULT 0,
-			ADD COLUMN IF NOT EXISTS rw_hamlet_two BIGINT NOT NULL DEFAULT 0,
-			ADD COLUMN IF NOT EXISTS north_border TEXT,
-			ADD COLUMN IF NOT EXISTS east_border TEXT,
-			ADD COLUMN IF NOT EXISTS south_border TEXT,
-			ADD COLUMN IF NOT EXISTS west_border TEXT,
-			ADD COLUMN IF NOT EXISTS area TEXT,
-			ADD COLUMN IF NOT EXISTS total_male BIGINT NOT NULL DEFAULT 0,
-			ADD COLUMN IF NOT EXISTS total_female BIGINT NOT NULL DEFAULT 0,
-			ADD COLUMN IF NOT EXISTS demographic_religions JSONB NOT NULL DEFAULT '[]'::jsonb,
-			ADD COLUMN IF NOT EXISTS demographic_religion_rt JSONB NOT NULL DEFAULT '[]'::jsonb,
-			ADD COLUMN IF NOT EXISTS demographic_education JSONB NOT NULL DEFAULT '[]'::jsonb,
-			ADD COLUMN IF NOT EXISTS demographic_occupation JSONB NOT NULL DEFAULT '[]'::jsonb,
-			ADD COLUMN IF NOT EXISTS demographic_ages JSONB NOT NULL DEFAULT '[]'::jsonb,
-			ADD COLUMN IF NOT EXISTS ig_usn VARCHAR(255),
-			ADD COLUMN IF NOT EXISTS tiktok_usn VARCHAR(255),
-			ADD COLUMN IF NOT EXISTS yt_usn VARCHAR(255),
-			ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT FALSE;
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS potential_detail (
+			id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+			title VARCHAR(255) NOT NULL DEFAULT '',
+			detail VARCHAR(255) NOT NULL DEFAULT '',
+			description VARCHAR(255) NOT NULL DEFAULT ''
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+		`ALTER TABLE categories MODIFY COLUMN type VARCHAR(50) NOT NULL DEFAULT ''`,
+		`UPDATE galleries g JOIN categories c ON g.category_id = c.id
+			SET g.type = c.type
+			WHERE c.type IN ('dashboard', 'gallery')`,
+		`CREATE INDEX idx_galleries_type ON galleries(type)`,
+	}
 
-		CREATE TABLE IF NOT EXISTS potential_detail (
-			id BIGSERIAL PRIMARY KEY,
-			title TEXT NOT NULL DEFAULT '',
-			detail TEXT NOT NULL DEFAULT '',
-			description TEXT NOT NULL DEFAULT ''
-		);
-
-		ALTER TABLE categories ALTER COLUMN type DROP NOT NULL;
-		ALTER TABLE categories ALTER COLUMN type SET DEFAULT '';
-
-		ALTER TABLE galleries ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'gallery';
-
-		UPDATE galleries g
-		SET type = c.type
-		FROM categories c
-		WHERE g.category_id = c.id
-			AND c.type IN ('dashboard', 'gallery');
-
-		CREATE INDEX IF NOT EXISTS idx_galleries_type ON galleries(type);
-	`
-	if _, err := db.Exec(query); err != nil {
-		log.Println("Auto migration notice:", err)
+	for _, query := range statements {
+		if _, err := db.Exec(query); err != nil {
+			log.Println("Auto migration notice:", err)
+		}
 	}
 }

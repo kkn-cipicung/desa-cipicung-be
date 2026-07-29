@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/lib/pq"
+	"cipicung.id/be/pkg/types"
 )
 
 type AddProfilePayload struct {
@@ -62,58 +62,58 @@ type ProfilePayload struct {
 }
 
 type ProfileResponse struct {
-	ID                        uint           `db:"id" json:"id"`
-	Name                      string         `db:"name" json:"name"`
-	Province                  string         `db:"province" json:"province"`
-	Regency                   string         `db:"regency" json:"regency"`
-	District                  string         `db:"district" json:"district"`
-	PostalCode                string         `db:"postal_code" json:"postal_code"`
-	Address                   string         `db:"address" json:"address"`
-	Phone                     string         `db:"phone" json:"phone"`
-	Email                     string         `db:"email" json:"email"`
-	Website                   string         `db:"website" json:"website"`
-	Latitude                  float64        `db:"latitude" json:"latitude"`
-	Longitude                 float64        `db:"longitude" json:"longitude"`
-	Vision                    string         `db:"vision" json:"vision"`
-	Mission                   pq.StringArray `db:"mission" json:"mission"`
-	History                   string         `db:"history" json:"history"`
-	Description               string         `db:"description" json:"description"`
-	Region                    string         `db:"region" json:"region"`
-	HamletOne                 int64          `db:"hamlet_one" json:"hamlet_one"`
-	HamletTwo                 int64          `db:"hamlet_two" json:"hamlet_two"`
-	TotalFamily               int64          `db:"total_family" json:"total_family"`
-	TotalRT                   int64          `db:"total_rt" json:"total_rt"`
-	TotalRW                   int64          `db:"total_rw" json:"total_rw"`
-	RTHamletOne               int64          `db:"rt_hamlet_one" json:"rt_hamlet_one"`
-	RTHamletTwo               int64          `db:"rt_hamlet_two" json:"rt_hamlet_two"`
-	RWHamletOne               int64          `db:"rw_hamlet_one" json:"rw_hamlet_one"`
-	RWHamletTwo               int64          `db:"rw_hamlet_two" json:"rw_hamlet_two"`
-	NorthBorder               string         `db:"north_border" json:"north_border"`
-	EastBorder                string         `db:"east_border" json:"east_border"`
-	SouthBorder               string         `db:"south_border" json:"south_border"`
-	WestBorder                string         `db:"west_border" json:"west_border"`
-	Area                      string         `db:"area" json:"area"`
-	Population                string         `db:"population" json:"population"`
-	TotalMale                 int64          `db:"total_male" json:"total_male"`
-	TotalFemale               int64          `db:"total_female" json:"total_female"`
-	DemographicReligionsJSON  string         `db:"demographic_religions" json:"-"`
-	DemographicReligionRTJSON string         `db:"demographic_religion_rt" json:"-"`
-	DemographicEducationJSON  string         `db:"demographic_education" json:"-"`
-	DemographicOccupationJSON string         `db:"demographic_occupation" json:"-"`
-	DemographicAgesJSON       string         `db:"demographic_ages" json:"-"`
-	IsActive                  bool           `db:"is_active" json:"is_active"`
-	CreatedAt                 time.Time      `db:"created_at" json:"created_at"`
-	UpdatedAt                 time.Time      `db:"updated_at" json:"updated_at"`
-	HeadmanID                 uint           `db:"headman_id" json:"headman_id"`
-	HeadmanName               string         `db:"headman_name" json:"headman_name"`
-	HeadmanPosition           string         `db:"headman_position" json:"headman_position"`
-	HeadmanPhone              string         `db:"headman_phone" json:"headman_phone"`
-	HeadmanEmail              string         `db:"headman_email" json:"headman_email"`
-	HeadmanDescription        string         `db:"headman_description" json:"headman_description"`
-	HeadmanOrderNumber        int            `db:"headman_order_number" json:"headman_order_number"`
-	HeadmanIsActive           bool           `db:"headman_is_active" json:"headman_is_active"`
-	HeadmanStartDate          *time.Time     `db:"headman_start_date" json:"headman_start_date"`
-	HeadmanFinishDate         *time.Time     `db:"headman_finish_date" json:"headman_finish_date"`
+	ID                        uint                  `db:"id" json:"id"`
+	Name                      string                `db:"name" json:"name"`
+	Province                  string                `db:"province" json:"province"`
+	Regency                   string                `db:"regency" json:"regency"`
+	District                  string                `db:"district" json:"district"`
+	PostalCode                string                `db:"postal_code" json:"postal_code"`
+	Address                   string                `db:"address" json:"address"`
+	Phone                     string                `db:"phone" json:"phone"`
+	Email                     string                `db:"email" json:"email"`
+	Website                   string                `db:"website" json:"website"`
+	Latitude                  float64               `db:"latitude" json:"latitude"`
+	Longitude                 float64               `db:"longitude" json:"longitude"`
+	Vision                    string                `db:"vision" json:"vision"`
+	Mission                   types.JSONStringArray `db:"mission" json:"mission"`
+	History                   string                `db:"history" json:"history"`
+	Description               string                `db:"description" json:"description"`
+	Region                    string                `db:"region" json:"region"`
+	HamletOne                 int64                 `db:"hamlet_one" json:"hamlet_one"`
+	HamletTwo                 int64                 `db:"hamlet_two" json:"hamlet_two"`
+	TotalFamily               int64                 `db:"total_family" json:"total_family"`
+	TotalRT                   int64                 `db:"total_rt" json:"total_rt"`
+	TotalRW                   int64                 `db:"total_rw" json:"total_rw"`
+	RTHamletOne               int64                 `db:"rt_hamlet_one" json:"rt_hamlet_one"`
+	RTHamletTwo               int64                 `db:"rt_hamlet_two" json:"rt_hamlet_two"`
+	RWHamletOne               int64                 `db:"rw_hamlet_one" json:"rw_hamlet_one"`
+	RWHamletTwo               int64                 `db:"rw_hamlet_two" json:"rw_hamlet_two"`
+	NorthBorder               string                `db:"north_border" json:"north_border"`
+	EastBorder                string                `db:"east_border" json:"east_border"`
+	SouthBorder               string                `db:"south_border" json:"south_border"`
+	WestBorder                string                `db:"west_border" json:"west_border"`
+	Area                      string                `db:"area" json:"area"`
+	Population                string                `db:"population" json:"population"`
+	TotalMale                 int64                 `db:"total_male" json:"total_male"`
+	TotalFemale               int64                 `db:"total_female" json:"total_female"`
+	DemographicReligionsJSON  string                `db:"demographic_religions" json:"-"`
+	DemographicReligionRTJSON string                `db:"demographic_religion_rt" json:"-"`
+	DemographicEducationJSON  string                `db:"demographic_education" json:"-"`
+	DemographicOccupationJSON string                `db:"demographic_occupation" json:"-"`
+	DemographicAgesJSON       string                `db:"demographic_ages" json:"-"`
+	IsActive                  bool                  `db:"is_active" json:"is_active"`
+	CreatedAt                 time.Time             `db:"created_at" json:"created_at"`
+	UpdatedAt                 time.Time             `db:"updated_at" json:"updated_at"`
+	HeadmanID                 uint                  `db:"headman_id" json:"headman_id"`
+	HeadmanName               string                `db:"headman_name" json:"headman_name"`
+	HeadmanPosition           string                `db:"headman_position" json:"headman_position"`
+	HeadmanPhone              string                `db:"headman_phone" json:"headman_phone"`
+	HeadmanEmail              string                `db:"headman_email" json:"headman_email"`
+	HeadmanDescription        string                `db:"headman_description" json:"headman_description"`
+	HeadmanOrderNumber        int                   `db:"headman_order_number" json:"headman_order_number"`
+	HeadmanIsActive           bool                  `db:"headman_is_active" json:"headman_is_active"`
+	HeadmanStartDate          *time.Time            `db:"headman_start_date" json:"headman_start_date"`
+	HeadmanFinishDate         *time.Time            `db:"headman_finish_date" json:"headman_finish_date"`
 }
 
 type ProfileOutput struct {
@@ -239,8 +239,8 @@ type ProfileRegionBoundaryResponse struct {
 }
 
 type ProfileVisionMissionResponse struct {
-	Vision  string         `db:"vision" json:"vision"`
-	Mission pq.StringArray `db:"mission" json:"mission"`
+	Vision  string                `db:"vision" json:"vision"`
+	Mission types.JSONStringArray `db:"mission" json:"mission"`
 }
 
 type ProfileVisionMissionOutput struct {

@@ -33,7 +33,7 @@ func (r *repository) Create(ctx context.Context, payload AddContactPayload) erro
 			name, province, regency, district, postal_code, address, phone, email, website,
 			ig_usn, tiktok_usn, yt_usn, created_at, updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		payload.Name, payload.Province, payload.Regency, payload.District, payload.PostalCode,
@@ -111,17 +111,17 @@ func (r *repository) Activate(ctx context.Context, payload ContactPayload) error
 	defer tx.Rollback()
 
 	var exists bool
-	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM villages WHERE id = $1)`, payload.ID); err != nil {
+	if err := tx.GetContext(ctx, &exists, `SELECT EXISTS (SELECT 1 FROM villages WHERE id = ?)`, payload.ID); err != nil {
 		return err
 	}
 	if !exists {
 		return ErrContactNotFound
 	}
 
-	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = FALSE WHERE id <> $1 AND is_active = TRUE`, payload.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = FALSE WHERE id <> ? AND is_active = TRUE`, payload.ID); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = $1`, payload.ID); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE villages SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, payload.ID); err != nil {
 		return err
 	}
 
@@ -131,25 +131,26 @@ func (r *repository) Activate(ctx context.Context, payload ContactPayload) error
 func (r *repository) Update(ctx context.Context, payload EditContactPayload) error {
 	query := `
 		UPDATE villages
-		SET name = $2,
-			province = $3,
-			regency = $4,
-			district = $5,
-			postal_code = $6,
-			address = $7,
-			phone = $8,
-			email = $9,
-			website = $10,
-			ig_usn = $11,
-			tiktok_usn = $12,
-			yt_usn = $13,
+		SET name = ?,
+			province = ?,
+			regency = ?,
+			district = ?,
+			postal_code = ?,
+			address = ?,
+			phone = ?,
+			email = ?,
+			website = ?,
+			ig_usn = ?,
+			tiktok_usn = ?,
+			yt_usn = ?,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1
+		WHERE id = ?
 	`
 	result, err := r.db.ExecContext(ctx, query,
-		payload.ID, payload.Name, payload.Province, payload.Regency, payload.District,
+		payload.Name, payload.Province, payload.Regency, payload.District,
 		payload.PostalCode, payload.Address, payload.Phone, payload.Email, payload.Website,
 		payload.Instagram, payload.TikTok, payload.YouTube,
+		payload.ID,
 	)
 	if err != nil {
 		return err
@@ -161,7 +162,7 @@ func (r *repository) Update(ctx context.Context, payload EditContactPayload) err
 func (r *repository) Delete(ctx context.Context, payload ContactPayload) error {
 	query := `
 		DELETE FROM villages
-		WHERE id = $1
+		WHERE id = ?
 	`
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
 	if err != nil {

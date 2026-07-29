@@ -39,18 +39,18 @@ func (r *repository) Create(ctx context.Context, payload AddMapPayload) error {
 	if targetID > 0 {
 		query := `
 			UPDATE villages
-			SET elevation = $2,
-				coordinate = $3,
+			SET elevation = ?,
+				coordinate = ?,
 				updated_at = CURRENT_TIMESTAMP
-			WHERE id = $1
+			WHERE id = ?
 		`
-		_, updateErr := r.db.ExecContext(ctx, query, targetID, payload.Elevation, payload.Coordinate)
+		_, updateErr := r.db.ExecContext(ctx, query, payload.Elevation, payload.Coordinate, targetID)
 		return updateErr
 	}
 
 	query := `
 		INSERT INTO villages (name, elevation, coordinate, is_active, created_at, updated_at)
-		VALUES ('Map', $1, $2, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES ('Map', ?, ?, TRUE, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, createErr := r.db.ExecContext(ctx, query, payload.Elevation, payload.Coordinate)
 	return createErr
@@ -101,13 +101,13 @@ func (r *repository) Update(ctx context.Context, payload EditMapPayload) error {
 
 	query := `
 		UPDATE villages
-		SET elevation = $2,
-			coordinate = $3,
+		SET elevation = ?,
+			coordinate = ?,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1
+		WHERE id = ?
 	`
 	result, err := tx.ExecContext(ctx, query,
-		payload.ID, payload.Elevation, payload.Coordinate,
+		payload.Elevation, payload.Coordinate, payload.ID,
 	)
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func (r *repository) Update(ctx context.Context, payload EditMapPayload) error {
 func (r *repository) Delete(ctx context.Context, payload MapPayload) error {
 	query := `
 		DELETE FROM villages
-		WHERE id = $1
+		WHERE id = ?
 	`
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
 	if err != nil {
@@ -187,4 +187,3 @@ func mapSelectQuery() string {
 		FROM villages
 	`
 }
-

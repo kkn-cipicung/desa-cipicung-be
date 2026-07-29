@@ -52,7 +52,7 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT }}
           source: "main"
-          target: "/home/ilham/app/desa-cipicung-be/"
+          target: "/home/cipt8645/app/desa-cipicung-be/"
 
       - name: Restart Service on VPS
         uses: appleboy/ssh-action@master
@@ -62,6 +62,6 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            cd /home/ilham/app/desa-cipicung-be/
+            cd /home/cipt8645/app/desa-cipicung-be/
             chmod +x main
             echo "${{ secrets.VPS_PASSWORD }}" | sudo -S systemctl restart cipicung-api.service

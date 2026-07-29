@@ -25,7 +25,7 @@ func (r *repository) Detail(ctx context.Context) (*VillageStats, error) {
 	query := `
 		SELECT
 			COALESCE(
-				NULLIF(regexp_replace(COALESCE(population, ''), '[^0-9]', '', 'g'), '')::bigint,
+				CAST(NULLIF(REGEXP_REPLACE(COALESCE(population, ''), '[^0-9]', ''), '') AS UNSIGNED),
 				total_population,
 				0
 			) AS population,
@@ -34,11 +34,11 @@ func (r *repository) Detail(ctx context.Context) (*VillageStats, error) {
 			COALESCE(total_female, 0) AS female,
 			COALESCE(hamlet_one, 0) AS hamlet_one,
 			COALESCE(hamlet_two, 0) AS hamlet_two,
-			COALESCE(demographic_religions, '[]'::jsonb)::text AS religions,
-			COALESCE(demographic_religion_rt, '[]'::jsonb)::text AS religion_rt,
-			COALESCE(demographic_education, '[]'::jsonb)::text AS education,
-			COALESCE(demographic_occupation, '[]'::jsonb)::text AS occupation,
-			COALESCE(demographic_ages, '[]'::jsonb)::text AS ages
+			COALESCE(demographic_religions, '[]') AS religions,
+			COALESCE(demographic_religion_rt, '[]') AS religion_rt,
+			COALESCE(demographic_education, '[]') AS education,
+			COALESCE(demographic_occupation, '[]') AS occupation,
+			COALESCE(demographic_ages, '[]') AS ages
 		FROM villages
 		LIMIT 1
 	`

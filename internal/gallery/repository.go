@@ -37,18 +37,25 @@ func (r *repository) Create(ctx context.Context, payload AddGalleryPayload, medi
 
 	query := `
 		INSERT INTO galleries (created_by, category_id, title, description, media_id, type)
-		SELECT $1, $2, $3, $4, NULL, 'gallery'
+		SELECT ?, ?, ?, ?, NULL, 'gallery'
 		FROM categories
-		WHERE id = $2
-		RETURNING id
+		WHERE id = ?
 	`
-	var galleryID uint
-	if err := tx.QueryRowContext(ctx, query, payload.CreatedBy, payload.CategoryID, payload.Title, payload.Description).Scan(&galleryID); err != nil {
+	result, err := tx.ExecContext(ctx, query, payload.CreatedBy, payload.CategoryID, payload.Title, payload.Description, payload.CategoryID)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrInvalidGalleryCategory
 		}
 		return err
 	}
+	insertID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	if insertID == 0 {
+		return ErrInvalidGalleryCategory
+	}
+	galleryID := uint(insertID)
 
 	if _, err := utils.AttachMediaToEntityColumn(ctx, tx, media, "gallery", galleryID, "image", "galleries", "media_id"); err != nil {
 		return err
@@ -66,7 +73,7 @@ func (r *repository) List(ctx context.Context, payload ListGalleryPayload) ([]Ga
 		LEFT JOIN media m ON g.media_id = m.id
 		WHERE g.type = 'gallery'
 		ORDER BY g.id DESC
-		LIMIT $1 OFFSET $2
+		LIMIT ? OFFSET ?
 	`
 	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index); err != nil {
 		return nil, err
@@ -83,7 +90,7 @@ func (r *repository) FindByID(ctx context.Context, payload GalleryPayload) (*Gal
 		FROM galleries g
 		JOIN categories c ON g.category_id = c.id
 		LEFT JOIN media m ON g.media_id = m.id
-		WHERE g.id = $1
+		WHERE g.id = ?
 			AND g.type = 'gallery'
 	`
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
@@ -104,14 +111,14 @@ func (r *repository) Update(ctx context.Context, payload EditGalleryPayload, med
 
 	query := `
 		UPDATE galleries
-		SET category_id = $2,
-			title = $3,
-			description = $4
-		WHERE id = $1
-			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = $2)
+		SET category_id = ?,
+			title = ?,
+			description = ?
+		WHERE id = ?
+			AND EXISTS (SELECT 1 FROM categories c WHERE c.id = ?)
 			AND type = 'gallery'
 	`
-	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Description)
+	result, err := tx.ExecContext(ctx, query, payload.CategoryID, payload.Title, payload.Description, payload.ID, payload.CategoryID)
 	if err != nil {
 		return err
 	}
@@ -138,7 +145,7 @@ func (r *repository) Update(ctx context.Context, payload EditGalleryPayload, med
 func (r *repository) Delete(ctx context.Context, payload GalleryPayload) error {
 	query := `
 		DELETE FROM galleries
-		WHERE id = $1
+		WHERE id = ?
 			AND type = 'gallery'
 	`
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
@@ -164,7 +171,7 @@ func ensureGalleryExists(ctx context.Context, tx *sqlx.Tx, id uint) error {
 	if err := tx.GetContext(ctx, &exists, `
 		SELECT EXISTS (
 			SELECT 1 FROM galleries g
-			WHERE g.id = $1
+			WHERE g.id = ?
 				AND g.type = 'gallery'
 		)
 	`, id); err != nil {

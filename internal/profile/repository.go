@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 
+	"cipicung.id/be/pkg/types"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 )
 
 var ErrProfileNotFound = errors.New("profile not found")
@@ -58,29 +58,22 @@ func (r *repository) Create(ctx context.Context, payload AddProfilePayload) erro
 			created_at, updated_at
 		)
 		VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9,
-			$10, $11, $12, $13, $14, $15, $16, $17, $18,
-			$19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31,
-			$32, $33, $34::jsonb, $35::jsonb, $36::jsonb, $37::jsonb, $38::jsonb,
+			?, ?, ?, ?, ?, ?, ?, ?, ?,
+			?, ?, ?, ?, ?, ?, ?, ?, ?,
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+			?, ?, ?, ?, ?, ?, ?,
 			CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 		)
-		RETURNING id
 	`
-	var villageID uint
-	if err := tx.QueryRowContext(ctx, query,
-		payload.Name, payload.Province, payload.Regency, payload.District, payload.PostalCode,
-		payload.Address, payload.Phone, payload.Email, payload.Website, payload.Latitude,
-		payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History, payload.Description,
-		payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalFamily, payload.TotalRT,
-		payload.TotalRW, payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne, payload.RWHamletTwo,
-		payload.NorthBorder, payload.EastBorder, payload.SouthBorder, payload.WestBorder,
-		payload.Area, payload.Population,
-		payload.TotalMale, payload.TotalFemale, demographicJSON(payload.DemographicReligions),
-		demographicJSON(payload.DemographicReligionRT), demographicJSON(payload.DemographicEducation),
-		demographicJSON(payload.DemographicOccupation), demographicJSON(payload.DemographicAges),
-	).Scan(&villageID); err != nil {
+	result, err := tx.ExecContext(ctx, query, profileVillageValues(payload)...)
+	if err != nil {
 		return err
 	}
+	insertID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	villageID := uint(insertID)
 
 	if len(payload.Headmen) > 0 {
 		for index := range payload.Headmen {
@@ -109,12 +102,12 @@ func (r *repository) FindHeadmen(ctx context.Context, villageID uint) ([]Profile
 		SELECT id, COALESCE(name, '') AS name, COALESCE(position, '') AS position,
 			COALESCE(phone, '') AS phone, COALESCE(email, '') AS email,
 			COALESCE(description, '') AS description, COALESCE(order_number, 0) AS order_number,
-			COALESCE(is_active, false) AS is_active,
-			COALESCE(TO_CHAR(start_date, 'YYYY-MM-DD'), '') AS start_date,
-			CASE WHEN finish_date IS NULL THEN NULL ELSE TO_CHAR(finish_date, 'YYYY-MM-DD') END AS finish_date
+			COALESCE(is_active, FALSE) AS is_active,
+			COALESCE(DATE_FORMAT(start_date, '%Y-%m-%d'), '') AS start_date,
+			CASE WHEN finish_date IS NULL THEN NULL ELSE DATE_FORMAT(finish_date, '%Y-%m-%d') END AS finish_date
 		FROM officials
-		WHERE village_id = $1 AND position = $2
-		ORDER BY start_date DESC NULLS LAST, id DESC
+		WHERE village_id = ? AND position = ?
+		ORDER BY start_date IS NULL ASC, start_date DESC, id DESC
 	`
 	if err := r.db.SelectContext(ctx, &results, query, villageID, headmanPosition); err != nil {
 		return nil, err
@@ -181,7 +174,7 @@ func (r *repository) FindRegionBoundary(ctx context.Context) (*ProfileRegionBoun
 func (r *repository) FindVisionMission(ctx context.Context) (*ProfileVisionMissionResponse, error) {
 	var result ProfileVisionMissionResponse
 	query := `
-		SELECT COALESCE(vision, '') AS vision, COALESCE(mission, ARRAY[]::varchar[]) AS mission
+		SELECT COALESCE(vision, '') AS vision, COALESCE(mission, '[]') AS mission
 		FROM villages
 		ORDER BY id ASC
 		LIMIT 1
@@ -200,11 +193,11 @@ func (r *repository) FindGovernmentStructure(ctx context.Context) ([]GovernmentS
 	query := `
 		SELECT id, COALESCE(name, '') AS name, COALESCE(position, '') AS position,
 			COALESCE(order_number, 0) AS order_number,
-			COALESCE(is_active, false) AS is_active
+			COALESCE(is_active, FALSE) AS is_active
 		FROM officials
 		WHERE is_active = TRUE
 		ORDER BY
-			CASE WHEN position = $1 AND is_active = TRUE THEN 0 ELSE 1 END,
+			CASE WHEN position = ? AND is_active = TRUE THEN 0 ELSE 1 END,
 			order_number ASC,
 			id ASC
 	`
@@ -244,59 +237,49 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 
 	query := `
 		UPDATE villages
-		SET name = $2,
-			province = $3,
-			regency = $4,
-			district = $5,
-			postal_code = $6,
-			address = $7,
-			phone = $8,
-			email = $9,
-			website = $10,
-			latitude = $11,
-			longitude = $12,
-			vision = $13,
-			mission = $14,
-			history = $15,
-			description = $16,
-			region = $17,
-			hamlet_one = $18,
-			hamlet_two = $19,
-			total_family = $20,
-			total_rt = $21,
-			total_rw = $22,
-			rt_hamlet_one = $23,
-			rt_hamlet_two = $24,
-			rw_hamlet_one = $25,
-			rw_hamlet_two = $26,
-			north_border = $27,
-			east_border = $28,
-			south_border = $29,
-			west_border = $30,
-			area = $31,
-			population = $32,
-			total_male = $33,
-			total_female = $34,
-			demographic_religions = $35::jsonb,
-			demographic_religion_rt = $36::jsonb,
-			demographic_education = $37::jsonb,
-			demographic_occupation = $38::jsonb,
-			demographic_ages = $39::jsonb,
+		SET name = ?,
+			province = ?,
+			regency = ?,
+			district = ?,
+			postal_code = ?,
+			address = ?,
+			phone = ?,
+			email = ?,
+			website = ?,
+			latitude = ?,
+			longitude = ?,
+			vision = ?,
+			mission = ?,
+			history = ?,
+			description = ?,
+			region = ?,
+			hamlet_one = ?,
+			hamlet_two = ?,
+			total_family = ?,
+			total_rt = ?,
+			total_rw = ?,
+			rt_hamlet_one = ?,
+			rt_hamlet_two = ?,
+			rw_hamlet_one = ?,
+			rw_hamlet_two = ?,
+			north_border = ?,
+			east_border = ?,
+			south_border = ?,
+			west_border = ?,
+			area = ?,
+			population = ?,
+			total_male = ?,
+			total_female = ?,
+			demographic_religions = ?,
+			demographic_religion_rt = ?,
+			demographic_education = ?,
+			demographic_occupation = ?,
+			demographic_ages = ?,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1
+		WHERE id = ?
 	`
-	result, err := tx.ExecContext(ctx, query,
-		payload.ID, payload.Name, payload.Province, payload.Regency, payload.District,
-		payload.PostalCode, payload.Address, payload.Phone, payload.Email, payload.Website,
-		payload.Latitude, payload.Longitude, payload.Vision, pq.Array(payload.Mission), payload.History,
-		payload.Description, payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalFamily,
-		payload.TotalRT, payload.TotalRW, payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne,
-		payload.RWHamletTwo, payload.NorthBorder, payload.EastBorder, payload.SouthBorder, payload.WestBorder,
-		payload.Area, payload.Population,
-		payload.TotalMale, payload.TotalFemale, demographicJSON(payload.DemographicReligions),
-		demographicJSON(payload.DemographicReligionRT), demographicJSON(payload.DemographicEducation),
-		demographicJSON(payload.DemographicOccupation), demographicJSON(payload.DemographicAges),
-	)
+	args := append(profileVillageValues(payload.AddProfilePayload), payload.ID)
+	result, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -309,7 +292,7 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 	}
 
 	if len(payload.Headmen) > 0 {
-		if _, err := tx.ExecContext(ctx, `DELETE FROM officials WHERE village_id = $1 AND position = $2`, payload.ID, headmanPosition); err != nil {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM officials WHERE village_id = ? AND position = ?`, payload.ID, headmanPosition); err != nil {
 			return err
 		}
 		for index := range payload.Headmen {
@@ -323,7 +306,7 @@ func (r *repository) Update(ctx context.Context, payload EditProfilePayload) err
 		}
 	}
 	if len(payload.Officials) > 0 {
-		if _, err := tx.ExecContext(ctx, `DELETE FROM officials WHERE village_id = $1 AND position <> $2`, payload.ID, headmanPosition); err != nil {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM officials WHERE village_id = ? AND position <> ?`, payload.ID, headmanPosition); err != nil {
 			return err
 		}
 	}
@@ -344,13 +327,11 @@ func (r *repository) Delete(ctx context.Context, payload ProfilePayload) error {
 	}
 	defer tx.Rollback()
 
-	_, err = tx.ExecContext(ctx, `DELETE FROM officials WHERE village_id = $1`, payload.ID)
-	if err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM officials WHERE village_id = ?`, payload.ID); err != nil {
 		return err
 	}
 
-	query := `DELETE FROM villages WHERE id = $1`
-	result, err := tx.ExecContext(ctx, query, payload.ID)
+	result, err := tx.ExecContext(ctx, `DELETE FROM villages WHERE id = ?`, payload.ID)
 	if err != nil {
 		return err
 	}
@@ -375,7 +356,7 @@ func profileSelectQuery() string {
 			COALESCE(v.phone, '') AS phone, COALESCE(v.email, '') AS email, COALESCE(v.website, '') AS website,
 			COALESCE(v.latitude, 0) AS latitude,
 			COALESCE(v.longitude, 0) AS longitude, COALESCE(v.vision, '') AS vision,
-			COALESCE(v.mission, ARRAY[]::varchar[]) AS mission,
+			COALESCE(v.mission, '[]') AS mission,
 			COALESCE(v.history, '') AS history, COALESCE(v.description, '') AS description,
 			COALESCE(v.region, '') AS region,
 			COALESCE(v.hamlet_one, 0) AS hamlet_one,
@@ -399,11 +380,11 @@ func profileSelectQuery() string {
 			COALESCE(v.population, '') AS population,
 			COALESCE(v.total_male, 0) AS total_male,
 			COALESCE(v.total_female, 0) AS total_female,
-			COALESCE(v.demographic_religions, '[]'::jsonb)::text AS demographic_religions,
-			COALESCE(v.demographic_religion_rt, '[]'::jsonb)::text AS demographic_religion_rt,
-			COALESCE(v.demographic_education, '[]'::jsonb)::text AS demographic_education,
-			COALESCE(v.demographic_occupation, '[]'::jsonb)::text AS demographic_occupation,
-			COALESCE(v.demographic_ages, '[]'::jsonb)::text AS demographic_ages,
+			COALESCE(v.demographic_religions, '[]') AS demographic_religions,
+			COALESCE(v.demographic_religion_rt, '[]') AS demographic_religion_rt,
+			COALESCE(v.demographic_education, '[]') AS demographic_education,
+			COALESCE(v.demographic_occupation, '[]') AS demographic_occupation,
+			COALESCE(v.demographic_ages, '[]') AS demographic_ages,
 			COALESCE(v.is_active, FALSE) AS is_active,
 			COALESCE(v.created_at, NOW()) AS created_at,
 			COALESCE(v.updated_at, NOW()) AS updated_at,
@@ -414,16 +395,33 @@ func profileSelectQuery() string {
 			COALESCE(o.email, '') AS headman_email,
 			COALESCE(o.description, '') AS headman_description,
 			COALESCE(o.order_number, 0) AS headman_order_number,
-			COALESCE(o.is_active, false) AS headman_is_active,
+			COALESCE(o.is_active, FALSE) AS headman_is_active,
 			o.start_date AS headman_start_date, o.finish_date AS headman_finish_date
 		FROM villages v
-		LEFT JOIN LATERAL (
-			SELECT * FROM officials
-			WHERE village_id = v.id AND (position = 'kepala-desa' OR position = 'kepala desa')
-			ORDER BY is_active DESC, finish_date DESC NULLS FIRST, start_date DESC NULLS LAST, id DESC
+		LEFT JOIN officials o ON o.id = (
+			SELECT oi.id
+			FROM officials oi
+			WHERE oi.village_id = v.id AND (oi.position = 'kepala-desa' OR oi.position = 'kepala desa')
+			ORDER BY oi.is_active DESC, oi.finish_date IS NOT NULL ASC, oi.finish_date DESC,
+				oi.start_date IS NULL ASC, oi.start_date DESC, oi.id DESC
 			LIMIT 1
-		) o ON TRUE
+		)
 	`
+}
+
+func profileVillageValues(payload AddProfilePayload) []any {
+	return []any{
+		payload.Name, payload.Province, payload.Regency, payload.District, payload.PostalCode,
+		payload.Address, payload.Phone, payload.Email, payload.Website, payload.Latitude,
+		payload.Longitude, payload.Vision, types.JSONStringArray(payload.Mission), payload.History, payload.Description,
+		payload.Region, payload.HamletOne, payload.HamletTwo, payload.TotalFamily, payload.TotalRT,
+		payload.TotalRW, payload.RTHamletOne, payload.RTHamletTwo, payload.RWHamletOne, payload.RWHamletTwo,
+		payload.NorthBorder, payload.EastBorder, payload.SouthBorder, payload.WestBorder,
+		payload.Area, payload.Population,
+		payload.TotalMale, payload.TotalFemale, demographicJSON(payload.DemographicReligions),
+		demographicJSON(payload.DemographicReligionRT), demographicJSON(payload.DemographicEducation),
+		demographicJSON(payload.DemographicOccupation), demographicJSON(payload.DemographicAges),
+	}
 }
 
 func insertHeadman(ctx context.Context, tx *sqlx.Tx, villageID uint, headman *ProfileOfficialInput) error {
@@ -432,7 +430,7 @@ func insertHeadman(ctx context.Context, tx *sqlx.Tx, villageID uint, headman *Pr
 			village_id, name, position, phone, email, description, order_number, is_active,
 			start_date, finish_date, created_at, updated_at
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err := tx.ExecContext(ctx, query,
 		villageID, headman.Name, headman.Position, headman.Phone, headman.Email,
@@ -444,16 +442,16 @@ func insertHeadman(ctx context.Context, tx *sqlx.Tx, villageID uint, headman *Pr
 func upsertHeadman(ctx context.Context, tx *sqlx.Tx, villageID uint, headman *ProfileOfficialInput) error {
 	query := `
 		UPDATE officials
-		SET name = $1,
-			phone = $2,
-			email = $3,
-			description = $4,
-			order_number = $5,
-			is_active = $6,
-			start_date = $7,
-			finish_date = $8,
+		SET name = ?,
+			phone = ?,
+			email = ?,
+			description = ?,
+			order_number = ?,
+			is_active = ?,
+			start_date = ?,
+			finish_date = ?,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE village_id = $9 AND position = $10
+		WHERE village_id = ? AND position = ?
 	`
 	result, err := tx.ExecContext(ctx, query,
 		headman.Name, headman.Phone, headman.Email, headman.Description,
@@ -476,7 +474,7 @@ func insertGovernmentOfficials(ctx context.Context, tx *sqlx.Tx, villageID uint,
 	query := `
 		INSERT INTO officials (
 			village_id, name, position, order_number, is_active, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	for _, official := range officials {
 		if _, err := tx.ExecContext(ctx, query, villageID, official.Name, official.Position,
@@ -495,7 +493,7 @@ func replaceResourcePotential(ctx context.Context, tx *sqlx.Tx, resource *Resour
 		return err
 	}
 	_, err := tx.ExecContext(ctx,
-		`INSERT INTO potential_detail (title, detail, description) VALUES ($1, $2, $3)`,
+		`INSERT INTO potential_detail (title, detail, description) VALUES (?, ?, ?)`,
 		resource.Title, resource.Detail, resource.Description,
 	)
 	return err
@@ -513,7 +511,7 @@ func (r *repository) CreateOfficial(ctx context.Context, payload AddOfficialPayl
 	query := `
 		INSERT INTO officials (
 			village_id, name, position, order_number, is_active, created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 	_, err := r.db.ExecContext(ctx, query,
 		villageID, payload.Name, payload.Position, payload.OrderNumber, payload.IsActive,
@@ -526,15 +524,15 @@ func (r *repository) ListOfficials(ctx context.Context, payload ListOfficialPayl
 	query := `
 		SELECT id, COALESCE(village_id, 0) AS village_id, COALESCE(name, '') AS name,
 			COALESCE(position, '') AS position, COALESCE(order_number, 0) AS order_number,
-			COALESCE(is_active, false) AS is_active,
-			COALESCE(TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS created_at,
-			COALESCE(TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS updated_at
+			COALESCE(is_active, FALSE) AS is_active,
+			COALESCE(DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s'), '') AS created_at,
+			COALESCE(DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s'), '') AS updated_at
 		FROM officials
-		WHERE ($3 = 0 OR village_id = $3) AND position <> $4
+		WHERE (? = 0 OR village_id = ?) AND position <> ?
 		ORDER BY order_number ASC, id ASC
-		LIMIT $1 OFFSET $2
+		LIMIT ? OFFSET ?
 	`
-	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index, payload.VillageID, headmanPosition); err != nil {
+	if err := r.db.SelectContext(ctx, &results, query, payload.VillageID, payload.VillageID, headmanPosition, payload.Limit, payload.Index); err != nil {
 		return nil, err
 	}
 	if results == nil {
@@ -548,11 +546,11 @@ func (r *repository) FindOfficialByID(ctx context.Context, payload OfficialPaylo
 	query := `
 		SELECT id, COALESCE(village_id, 0) AS village_id, COALESCE(name, '') AS name,
 			COALESCE(position, '') AS position, COALESCE(order_number, 0) AS order_number,
-			COALESCE(is_active, false) AS is_active,
-			COALESCE(TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS created_at,
-			COALESCE(TO_CHAR(updated_at, 'YYYY-MM-DD HH24:MI:SS'), '') AS updated_at
+			COALESCE(is_active, FALSE) AS is_active,
+			COALESCE(DATE_FORMAT(created_at, '%Y-%m-%d %H:%i:%s'), '') AS created_at,
+			COALESCE(DATE_FORMAT(updated_at, '%Y-%m-%d %H:%i:%s'), '') AS updated_at
 		FROM officials
-		WHERE id = $1
+		WHERE id = ?
 	`
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -566,15 +564,15 @@ func (r *repository) FindOfficialByID(ctx context.Context, payload OfficialPaylo
 func (r *repository) UpdateOfficial(ctx context.Context, payload EditOfficialPayload) error {
 	query := `
 		UPDATE officials
-		SET name = $2,
-			position = $3,
-			order_number = $4,
-			is_active = $5,
+		SET name = ?,
+			position = ?,
+			order_number = ?,
+			is_active = ?,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1
+		WHERE id = ?
 	`
 	result, err := r.db.ExecContext(ctx, query,
-		payload.ID, payload.Name, payload.Position, payload.OrderNumber, payload.IsActive,
+		payload.Name, payload.Position, payload.OrderNumber, payload.IsActive, payload.ID,
 	)
 	if err != nil {
 		return err
@@ -590,7 +588,7 @@ func (r *repository) UpdateOfficial(ctx context.Context, payload EditOfficialPay
 }
 
 func (r *repository) DeleteOfficial(ctx context.Context, payload OfficialPayload) error {
-	query := `DELETE FROM officials WHERE id = $1`
+	query := `DELETE FROM officials WHERE id = ?`
 	result, err := r.db.ExecContext(ctx, query, payload.ID)
 	if err != nil {
 		return err

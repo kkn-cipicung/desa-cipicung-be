@@ -80,4 +80,3 @@ type AddDashboardOverviewPayload struct {
 	TotalFamily int64   `db:"total_family" json:"total_family"`
 	TotalHamlet int64   `json:"total_hamlet"`
 }
-

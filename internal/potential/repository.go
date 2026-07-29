@@ -41,14 +41,18 @@ func (r *repository) Create(ctx context.Context, payload AddPotentialPayload, me
 
 	query := `
 		INSERT INTO potentials (category_id, title, subtitle, slug, description, location_id, media_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-		RETURNING id
+		VALUES (?, ?, ?, ?, ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 	`
 
-	var potentialID uint
-	if err := tx.QueryRowContext(ctx, query, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID).Scan(&potentialID); err != nil {
+	result, err := tx.ExecContext(ctx, query, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID)
+	if err != nil {
 		return err
 	}
+	insertID, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+	potentialID := uint(insertID)
 
 	if _, err := utils.AttachMediaToEntityColumn(ctx, tx, media, "potential", potentialID, "image", "potentials", "media_id"); err != nil {
 		return err
@@ -90,7 +94,7 @@ func (r *repository) List(ctx context.Context, payload ListPotentialPayload) ([]
 		LEFT JOIN categories c ON p.category_id = c.id
 		LEFT JOIN media m ON p.media_id = m.id
 		ORDER BY p.id DESC
-		LIMIT $1 OFFSET $2
+		LIMIT ? OFFSET ?
 	`
 
 	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index); err != nil {
@@ -111,7 +115,7 @@ func (r *repository) FindByID(ctx context.Context, payload PotentialPayload) (*P
 		FROM potentials p
 		LEFT JOIN categories c ON p.category_id = c.id
 		LEFT JOIN media m ON p.media_id = m.id
-		WHERE p.id = $1
+		WHERE p.id = ?
 	`
 
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
@@ -138,15 +142,15 @@ func (r *repository) Update(ctx context.Context, payload EditPotentialPayload, m
 
 	query := `
 		UPDATE potentials
-		SET category_id = $2,
-			title = $3,
-			subtitle = $4,
-			slug = $5,
-			description = $6,
-			location_id = COALESCE($7, location_id)
-		WHERE id = $1
+		SET category_id = ?,
+			title = ?,
+			subtitle = ?,
+			slug = ?,
+			description = ?,
+			location_id = COALESCE(?, location_id)
+		WHERE id = ?
 	`
-	result, err := tx.ExecContext(ctx, query, payload.ID, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID)
+	result, err := tx.ExecContext(ctx, query, payload.CategoryID, payload.Title, payload.Subtitle, payload.Slug, payload.Description, locationID, payload.ID)
 	if err != nil {
 		return err
 	}
@@ -178,14 +182,14 @@ func (r *repository) Delete(ctx context.Context, payload PotentialPayload) error
 	defer tx.Rollback()
 
 	var locationID *uint
-	if err := tx.GetContext(ctx, &locationID, `SELECT location_id FROM potentials WHERE id = $1`, payload.ID); err != nil {
+	if err := tx.GetContext(ctx, &locationID, `SELECT location_id FROM potentials WHERE id = ?`, payload.ID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrPotentialNotFound
 		}
 		return err
 	}
 
-	result, err := tx.ExecContext(ctx, `DELETE FROM potentials WHERE id = $1`, payload.ID)
+	result, err := tx.ExecContext(ctx, `DELETE FROM potentials WHERE id = ?`, payload.ID)
 	if err != nil {
 		return err
 	}
@@ -202,10 +206,10 @@ func (r *repository) Delete(ctx context.Context, payload PotentialPayload) error
 	if locationID != nil {
 		_, err = tx.ExecContext(ctx, `
 			DELETE FROM locations
-			WHERE id = $1
-				AND NOT EXISTS (SELECT 1 FROM potentials WHERE location_id = $1)
-				AND NOT EXISTS (SELECT 1 FROM businesses WHERE location_id = $1)
-		`, *locationID)
+			WHERE id = ?
+				AND NOT EXISTS (SELECT 1 FROM potentials WHERE location_id = ?)
+				AND NOT EXISTS (SELECT 1 FROM businesses WHERE location_id = ?)
+		`, *locationID, *locationID, *locationID)
 		if err != nil {
 			return err
 		}
