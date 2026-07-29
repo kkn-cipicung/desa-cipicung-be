@@ -51,6 +51,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT }}
+          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
           source: "main"
           target: "/home/cipt8645/app/desa-cipicung-be/"
 
