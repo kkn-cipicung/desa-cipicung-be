@@ -39,7 +39,7 @@ jobs:
           retention-days: 1
 
   deploy:
-    name: Deploy to Rumahweb
+    name: Deploy to VPS
     needs: build
 
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -63,7 +63,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
 
           source: "artifact/main"
-          target: "/home/cipt8645/app/desa-cipicung-be/"
+          target: "/home/ilham/app/desa-cipicung-be/"
           strip_components: 1
           overwrite: true
 
@@ -79,7 +79,7 @@ jobs:
           script: |
             set -e
 
-            cd /home/cipt8645/app/desa-cipicung-be
+            cd /home/ilham/app/desa-cipicung-be
 
             chmod +x main
 
