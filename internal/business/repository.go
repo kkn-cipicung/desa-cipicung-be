@@ -40,7 +40,7 @@ func (r *repository) Create(ctx context.Context, payload AddBusinessPayload) err
 			instagram,
 			facebook
 		)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -68,12 +68,12 @@ func (r *repository) List(ctx context.Context, payload ListBusinessPayload) ([]m
 			COALESCE(b.created_at, NOW()) AS created_at
 		FROM businesses b
 		LEFT JOIN categories c ON b.category_id = c.id
-		WHERE (? = '' OR c.slug = ?)
+		WHERE ($3 = '' OR c.slug = $3)
 		ORDER BY b.id DESC
-		LIMIT ? OFFSET ?
+		LIMIT $1 OFFSET $2
 	`
 
-	if err := r.db.SelectContext(ctx, &results, query, payload.Type, payload.Type, payload.Limit, payload.Index); err != nil {
+	if err := r.db.SelectContext(ctx, &results, query, payload.Limit, payload.Index, payload.Type); err != nil {
 		return nil, err
 	}
 	return results, nil
@@ -90,7 +90,7 @@ func (r *repository) FindByID(ctx context.Context, payload BusinessPayload) (*mo
 			COALESCE(b.created_at, NOW()) AS created_at
 		FROM businesses b
 		LEFT JOIN categories c ON b.category_id = c.id
-		WHERE b.id = ?
+		WHERE b.id = $1
 	`
 
 	if err := r.db.GetContext(ctx, &result, query, payload.ID); err != nil {
@@ -105,19 +105,20 @@ func (r *repository) FindByID(ctx context.Context, payload BusinessPayload) (*mo
 func (r *repository) Update(ctx context.Context, payload EditBusinessPayload) error {
 	query := `
 		UPDATE businesses
-		SET category_id = ?,
-			owner_name = COALESCE(?, owner_name),
-			business_name = COALESCE(?, business_name),
-			description = COALESCE(?, description),
-			phone = COALESCE(?, phone),
-			address = COALESCE(?, address),
-			location_id = COALESCE(?, location_id),
-			instagram = COALESCE(?, instagram),
-			facebook = COALESCE(?, facebook)
-		WHERE id = ?
+		SET category_id = $2,
+			owner_name = COALESCE($3, owner_name),
+			business_name = COALESCE($4, business_name),
+			description = COALESCE($5, description),
+			phone = COALESCE($6, phone),
+			address = COALESCE($7, address),
+			location_id = COALESCE($8, location_id),
+			instagram = COALESCE($9, instagram),
+			facebook = COALESCE($10, facebook)
+		WHERE id = $1
 	`
 
 	result, err := r.db.ExecContext(ctx, query,
+		payload.ID,
 		payload.CategoryID,
 		payload.OwnerName,
 		payload.BusinessName,
@@ -127,7 +128,6 @@ func (r *repository) Update(ctx context.Context, payload EditBusinessPayload) er
 		payload.LocationID,
 		payload.Instagram,
 		payload.Facebook,
-		payload.ID,
 	)
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func (r *repository) Update(ctx context.Context, payload EditBusinessPayload) er
 func (r *repository) Delete(ctx context.Context, payload BusinessPayload) error {
 	query := `
 		DELETE FROM businesses
-		WHERE id = ?
+		WHERE id = $1
 	`
 
 	result, err := r.db.ExecContext(ctx, query, payload.ID)

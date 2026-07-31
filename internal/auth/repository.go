@@ -29,7 +29,7 @@ func NewRepository(db *sqlx.DB) Repository {
 func (r *repository) Register(ctx context.Context, payload RegisterPayload, role string) error {
 	query := `
 		INSERT INTO users (name, username, password, role)
-		VALUES (?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4)
 	`
 
 	_, err := r.db.ExecContext(ctx, query, payload.Name, payload.Username, payload.Password, role)
@@ -41,7 +41,7 @@ func (r *repository) FindByUsername(ctx context.Context, username string) (*mode
 		SELECT id, COALESCE(role, '') AS role, COALESCE(username, '') AS username,
 			COALESCE(password, '') AS password, COALESCE(is_active, TRUE) AS is_active
 		FROM users
-		WHERE username = ?
+		WHERE username = $1
 	`
 
 	var user models.User
@@ -59,7 +59,7 @@ func (r *repository) UpdateLastLogin(ctx context.Context, userID uint) error {
 	query := `
 		UPDATE users
 		SET last_login = NOW()
-		WHERE id = ?
+		WHERE id = $1
 	`
 
 	_, err := r.db.ExecContext(ctx, query, userID)
@@ -69,7 +69,7 @@ func (r *repository) UpdateLastLogin(ctx context.Context, userID uint) error {
 func (r *repository) InsertSessionLog(ctx context.Context, userID uint, accessToken, refreshToken string) error {
 	query := `
 		INSERT INTO user_session_log (user_id, access_token, refresh_token)
-		VALUES (?, ?, ?)
+		VALUES ($1, $2, $3)
 	`
 	_, err := r.db.ExecContext(ctx, query, userID, accessToken, refreshToken)
 	return err

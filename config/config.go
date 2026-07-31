@@ -19,15 +19,15 @@ func LoadConfig() Config {
 		log.Println("No .env file found, relying on environment variables")
 	}
 
-	dbPort, _ := strconv.Atoi(getEnv("DB_PORT", "3306"))
+	dbPort, _ := strconv.Atoi(getEnv("DB_PORT", "5432"))
 
 	return Config{
 		Port: getEnv("PORT", "8080"),
 		DB: database.Config{
 			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     dbPort,
-			User:     getEnv("DB_USER", "root"),
-			Password: getEnv("DB_PASSWORD", ""),
+			User:     getEnv("DB_USER", "postgres"),
+			Password: getEnv("DB_PASSWORD", "postgres"),
 			DBName:   getEnv("DB_NAME", "cipicung"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 		},

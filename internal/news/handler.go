@@ -8,7 +8,7 @@ import (
 
 	"cipicung.id/be/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/go-sql-driver/mysql"
+	"github.com/lib/pq"
 )
 
 type Handler struct {
@@ -185,17 +185,17 @@ func handleNewsError(c *gin.Context, err error, message string) {
 		return
 	}
 
-	var mysqlErr *mysql.MySQLError
-	if errors.As(err, &mysqlErr) {
-		switch mysqlErr.Number {
-		case 1451, 1452:
-			utils.ErrorResponseJSON(c, http.StatusBadRequest, "Referenced data does not exist", databaseErrorDetail(err, mysqlErr))
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code {
+		case "23503":
+			utils.ErrorResponseJSON(c, http.StatusBadRequest, "Referenced data does not exist", databaseErrorDetail(err, pqErr))
 			return
-		case 1048, 1265, 1406, 1366:
-			utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid news data", databaseErrorDetail(err, mysqlErr))
+		case "23502", "22001", "22P02":
+			utils.ErrorResponseJSON(c, http.StatusBadRequest, "Invalid news data", databaseErrorDetail(err, pqErr))
 			return
-		case 1062:
-			utils.ErrorResponseJSON(c, http.StatusConflict, "News data already exists", databaseErrorDetail(err, mysqlErr))
+		case "23505":
+			utils.ErrorResponseJSON(c, http.StatusConflict, "News data already exists", databaseErrorDetail(err, pqErr))
 			return
 		}
 	}
@@ -203,6 +203,10 @@ func handleNewsError(c *gin.Context, err error, message string) {
 	utils.ErrorResponseJSONWithDetail(c, http.StatusInternalServerError, message, err)
 }
 
-func databaseErrorDetail(err error, mysqlErr *mysql.MySQLError) error {
-	return fmt.Errorf("%v: %s", err, mysqlErr.Message)
+func databaseErrorDetail(err error, pqErr *pq.Error) error {
+	detail := pqErr.Detail
+	if detail == "" {
+		detail = pqErr.Message
+	}
+	return fmt.Errorf("%v: %s", err, detail)
 }

@@ -75,29 +75,27 @@ func isExistingMediaReference(value string) bool {
 func InsertMedia(ctx context.Context, tx *sqlx.Tx, media *MediaPayload) (*uint, error) {
 	query := `
 		INSERT INTO media (file_path, mime_type, uploaded_by)
-		VALUES (?, ?, ?)
+		VALUES ($1, $2, $3)
+		RETURNING id
 	`
 
-	result, err := tx.ExecContext(ctx, query, media.FilePath, media.MimeType, media.UploadedBy)
-	if err != nil {
+	var id uint
+	if err := tx.QueryRowContext(ctx, query, media.FilePath, media.MimeType, media.UploadedBy).Scan(&id); err != nil {
 		return nil, err
 	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	mediaID := uint(id)
 
-	return &mediaID, nil
+	return &id, nil
 }
 
 func InsertMediaForEntity(ctx context.Context, tx *sqlx.Tx, media *MediaPayload, entityType string, entityID uint, role string) (*uint, error) {
 	query := `
 		INSERT INTO media (file_path, mime_type, uploaded_by, entity_type, entity_id, role)
-		VALUES (?, ?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
 	`
 
-	result, err := tx.ExecContext(
+	var id uint
+	if err := tx.QueryRowContext(
 		ctx,
 		query,
 		media.FilePath,
@@ -106,17 +104,11 @@ func InsertMediaForEntity(ctx context.Context, tx *sqlx.Tx, media *MediaPayload,
 		entityType,
 		entityID,
 		role,
-	)
-	if err != nil {
+	).Scan(&id); err != nil {
 		return nil, err
 	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	mediaID := uint(id)
 
-	return &mediaID, nil
+	return &id, nil
 }
 
 func AttachMediaToEntity(ctx context.Context, tx *sqlx.Tx, media *MediaPayload, entityType string, entityID uint, role string) (*uint, error) {
@@ -132,7 +124,7 @@ func AttachMediaToEntityColumn(ctx context.Context, tx *sqlx.Tx, media *MediaPay
 		return mediaID, err
 	}
 
-	query := fmt.Sprintf("UPDATE %s SET %s = ? WHERE id = ?", tableName, mediaColumn)
+	query := fmt.Sprintf("UPDATE %s SET %s = $1 WHERE id = $2", tableName, mediaColumn)
 	if _, err := tx.ExecContext(ctx, query, *mediaID, entityID); err != nil {
 		return nil, err
 	}
@@ -146,7 +138,7 @@ func ReplaceMediaOnEntityColumn(ctx context.Context, tx *sqlx.Tx, media *MediaPa
 	}
 
 	var oldMediaID *uint
-	selectQuery := fmt.Sprintf("SELECT %s FROM %s WHERE id = ? FOR UPDATE", mediaColumn, tableName)
+	selectQuery := fmt.Sprintf("SELECT %s FROM %s WHERE id = $1 FOR UPDATE", mediaColumn, tableName)
 	if err := tx.GetContext(ctx, &oldMediaID, selectQuery, entityID); err != nil {
 		return nil, nil, err
 	}
@@ -171,16 +163,13 @@ func deleteOldMedia(ctx context.Context, tx *sqlx.Tx, oldMediaID *uint, newMedia
 
 	var oldMedia ReplacedMediaPayload
 	if err := tx.GetContext(ctx, &oldMedia, `
-		SELECT id, COALESCE(file_path, '') AS file_path
-		FROM media
-		WHERE id = ?
+		DELETE FROM media
+		WHERE id = $1
+		RETURNING id, COALESCE(file_path, '') AS file_path
 	`, *oldMediaID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-		return nil, err
-	}
-	if _, err := tx.ExecContext(ctx, `DELETE FROM media WHERE id = ?`, *oldMediaID); err != nil {
 		return nil, err
 	}
 
@@ -210,20 +199,16 @@ func RemovePreparedMedia(media *MediaPayload) error {
 func InsertLocation(ctx context.Context, tx *sqlx.Tx, location *LocationPayload) (*uint, error) {
 	query := `
 		INSERT INTO locations (latitude, longitude, created_by_id, title, description, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		RETURNING id
 	`
 
-	result, err := tx.ExecContext(ctx, query, location.Latitude, location.Longitude, location.CreatedByID, location.Title, location.Description)
-	if err != nil {
+	var id uint
+	if err := tx.QueryRowContext(ctx, query, location.Latitude, location.Longitude, location.CreatedByID, location.Title, location.Description).Scan(&id); err != nil {
 		return nil, err
 	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-	locationID := uint(id)
 
-	return &locationID, nil
+	return &id, nil
 }
 
 func ParseDate(date string) (string, error) {
