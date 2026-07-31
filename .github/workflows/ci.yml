@@ -45,6 +45,9 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     runs-on: ubuntu-latest
+    env:
+      APP_DIR: /home/ilham/app/desa-cipicung-be
+      APP_SERVICE: desa-cipicung-be
 
     steps:
       - name: Download Artifact
@@ -52,6 +55,27 @@ jobs:
         with:
           name: cipicung-be-binary
           path: artifact
+
+      - name: Stop App
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          port: ${{ secrets.VPS_PORT }}
+
+          key: ${{ secrets.VPS_SSH_KEY }}
+
+          script: |
+            set -e
+
+            APP_DIR="${{ env.APP_DIR }}"
+            APP_SERVICE="${{ env.APP_SERVICE }}"
+
+            if systemctl list-unit-files "${APP_SERVICE}.service" >/dev/null 2>&1; then
+              sudo systemctl stop "${APP_SERVICE}" || true
+            else
+              pkill -f "${APP_DIR}/main" || true
+            fi
 
       - name: Transfer Binary
         uses: appleboy/scp-action@v1
@@ -63,7 +87,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
 
           source: "artifact/main"
-          target: "/home/ilham/app/desa-cipicung-be/"
+          target: "${{ env.APP_DIR }}/"
           strip_components: 1
           overwrite: true
 
@@ -79,9 +103,18 @@ jobs:
           script: |
             set -e
 
-            cd /home/ilham/app/desa-cipicung-be
+            APP_DIR="${{ env.APP_DIR }}"
+            APP_SERVICE="${{ env.APP_SERVICE }}"
+
+            cd "${APP_DIR}"
 
             chmod +x main
+
+            if systemctl list-unit-files "${APP_SERVICE}.service" >/dev/null 2>&1; then
+              sudo systemctl start "${APP_SERVICE}"
+            else
+              nohup "${APP_DIR}/main" > "${APP_DIR}/app.log" 2>&1 &
+            fi
 
             echo "Deployment berhasil"
             whoami
