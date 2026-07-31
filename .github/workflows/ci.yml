@@ -61,7 +61,6 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
 
           key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
 
           source: "artifact/main"
           target: "/home/cipt8645/app/desa-cipicung-be/"
@@ -76,7 +75,6 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
 
           key: ${{ secrets.VPS_SSH_KEY }}
-          passphrase: ${{ secrets.VPS_SSH_PASSPHRASE }}
 
           script: |
             set -e
