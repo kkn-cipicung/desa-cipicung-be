@@ -29,13 +29,13 @@ jobs:
       - name: Build Binary
         run: |
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 \
-          go build -o main ./cmd/api
+          go build -o main.new ./cmd/api
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: cipicung-be-binary
-          path: main
+          path: main.new
           retention-days: 1
 
   deploy:
@@ -71,7 +71,7 @@ jobs:
             APP_DIR="${{ env.APP_DIR }}"
             APP_SERVICE="${{ env.APP_SERVICE }}"
 
-            if systemctl list-unit-files "${APP_SERVICE}.service" >/dev/null 2>&1; then
+            if systemctl cat "${APP_SERVICE}" >/dev/null 2>&1; then
               sudo systemctl stop "${APP_SERVICE}" || true
             else
               pkill -f "${APP_DIR}/main" || true
@@ -86,7 +86,7 @@ jobs:
 
           key: ${{ secrets.VPS_SSH_KEY }}
 
-          source: "artifact/main"
+          source: "artifact/main.new"
           target: "${{ env.APP_DIR }}/"
           strip_components: 1
           overwrite: true
@@ -108,9 +108,10 @@ jobs:
 
             cd "${APP_DIR}"
 
+            mv main.new main
             chmod +x main
 
-            if systemctl list-unit-files "${APP_SERVICE}.service" >/dev/null 2>&1; then
+            if systemctl cat "${APP_SERVICE}" >/dev/null 2>&1; then
               sudo systemctl start "${APP_SERVICE}"
             else
               nohup "${APP_DIR}/main" > "${APP_DIR}/app.log" 2>&1 &
